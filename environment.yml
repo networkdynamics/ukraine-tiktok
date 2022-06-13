@@ -1,0 +1,7 @@
+name: polar-seeds
+channels:
+  - conda-forge
+dependencies:
+  - pip
+  - pip:
+    - TikTokApi
