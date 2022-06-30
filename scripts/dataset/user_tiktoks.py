@@ -7,32 +7,44 @@ import tqdm
 
 from TikTokApi import TikTokApi
 
-def main(args):
+def main():
 
-    with open(args.in_path, 'r') as f:
-        video_data = json.load(f)
+    hashtags = ['ukraine', 'standwithukraine', 'russia', 'nato', 'putin', 'moscow', 'zelenskyy', 'stopwar', 'stopthewar', 'ukrainewar', 'ww3']
+    
+    this_dir_path = os.path.dirname(os.path.abspath(__file__))
+    data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
 
-    users = list(set([video['author']['uniqueId'] for video in video_data]))
+    users = set()
+    for hashtag in hashtags:
+        print(f"Getting hashtag users: {hashtag}")
+        file_path = os.path.join(data_dir_path, f"#{hashtag}_videos.json")
+        with open(file_path, 'r') as f:
+            video_data = json.load(f)
 
-    user_videos = []
+        hashtag_users = set([video['author']['uniqueId'] for video in video_data])
+        users = users.union(hashtag_users)
+
+    users_dir_path = os.path.join(data_dir_path, "users")
+    if not os.path.exists(users_dir_path):
+        os.mkdir(users_dir_path)
 
     with TikTokApi() as api:
         for username in tqdm.tqdm(users):
-            for video in api.user(username=username).videos(count=1000):
+
+            user_dir_path = os.path.join(users_dir_path, username)
+            if not os.path.exists(user_dir_path):
+                os.mkdir(user_dir_path)
+
+            user_file_path = os.path.join(user_dir_path, f"user_videos.json")
+            if os.path.exists(user_file_path):
+                continue
+
+            user_videos = []
+            for video in api.user(username=username).videos(count=10000):
                 user_videos.append(video.info())
 
-    dir_path = os.path.dirname(args.out_path)
-    if not os.path.exists(dir_path):
-        os.mkdir(dir_path)
-
-    with open(args.out_path, 'w') as f:
-        json.dump(video_data, f)
+            with open(user_file_path, 'w') as f:
+                json.dump(user_videos, f)
 
 if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--in-path')
-    parser.add_argument('--out-path')
-    args = parser.parse_args()
-
-    main(args)
+    main()
