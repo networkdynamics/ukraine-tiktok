@@ -28,7 +28,9 @@ def main():
     if not os.path.exists(users_dir_path):
         os.mkdir(users_dir_path)
 
-    with TikTokApi() as api:
+    delay = 5
+
+    with TikTokApi(request_delay=delay) as api:
         for username in tqdm.tqdm(users):
 
             user_dir_path = os.path.join(users_dir_path, username)

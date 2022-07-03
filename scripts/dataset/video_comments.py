@@ -27,7 +27,7 @@ def main():
     if not os.path.exists(comments_dir_path):
         os.mkdir(comments_dir_path)
 
-    with TikTokApi() as api:
+    with TikTokApi(request_delay=2) as api:
         for video in tqdm.tqdm(videos):
 
             comment_dir_path = os.path.join(comments_dir_path, video['id'])
