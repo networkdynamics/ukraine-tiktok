@@ -27,24 +27,32 @@ def main():
     if not os.path.exists(comments_dir_path):
         os.mkdir(comments_dir_path)
 
-    delay = 5
-    with TikTokApi(request_delay=delay) as api:
-        for video in tqdm.tqdm(videos):
+    delay = 2
 
-            comment_dir_path = os.path.join(comments_dir_path, video['id'])
-            if not os.path.exists(comment_dir_path):
-                os.mkdir(comment_dir_path)
+    finished = False
+    while not finished:
+        try:
+            with TikTokApi(request_delay=delay) as api:
+                for video in tqdm.tqdm(videos):
 
-            comment_file_path = os.path.join(comment_dir_path, f"video_comments.json")
-            if os.path.exists(comment_file_path):
-                continue
+                    comment_dir_path = os.path.join(comments_dir_path, video['id'])
+                    if not os.path.exists(comment_dir_path):
+                        os.mkdir(comment_dir_path)
 
-            comments = []
-            for comment in api.video(id=video['id'], username=video['author']['uniqueId']).comments(count=1000):
-                comments.append(comment)
+                    comment_file_path = os.path.join(comment_dir_path, f"video_comments.json")
+                    if os.path.exists(comment_file_path):
+                        continue
 
-            with open(comment_file_path, 'w') as f:
-                json.dump(comments, f)
+                    comments = []
+                    for comment in api.video(id=video['id'], username=video['author']['uniqueId']).comments(count=1000):
+                        comments.append(comment)
+
+                    with open(comment_file_path, 'w') as f:
+                        json.dump(comments, f)
+
+                finished = True
+        except Exception:
+            time.sleep(600)
 
 if __name__ == '__main__':
     main()

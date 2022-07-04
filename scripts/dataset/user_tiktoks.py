@@ -28,25 +28,32 @@ def main():
     if not os.path.exists(users_dir_path):
         os.mkdir(users_dir_path)
 
-    delay = 5
+    delay = 10
 
-    with TikTokApi(request_delay=delay) as api:
-        for username in tqdm.tqdm(users):
+    finished = False
+    while not finished:
+        try:
+            with TikTokApi(request_delay=delay) as api:
+                for username in tqdm.tqdm(users):
 
-            user_dir_path = os.path.join(users_dir_path, username)
-            if not os.path.exists(user_dir_path):
-                os.mkdir(user_dir_path)
+                    user_dir_path = os.path.join(users_dir_path, username)
+                    if not os.path.exists(user_dir_path):
+                        os.mkdir(user_dir_path)
 
-            user_file_path = os.path.join(user_dir_path, f"user_videos.json")
-            if os.path.exists(user_file_path):
-                continue
+                    user_file_path = os.path.join(user_dir_path, f"user_videos.json")
+                    if os.path.exists(user_file_path):
+                        continue
 
-            user_videos = []
-            for video in api.user(username=username).videos(count=10000):
-                user_videos.append(video.info())
+                    user_videos = []
+                    for video in api.user(username=username).videos(count=10000):
+                        user_videos.append(video.info())
 
-            with open(user_file_path, 'w') as f:
-                json.dump(user_videos, f)
+                    with open(user_file_path, 'w') as f:
+                        json.dump(user_videos, f)
+                
+                finished = True
+        except Exception:
+            time.sleep(600)
 
 if __name__ == '__main__':
     main()
