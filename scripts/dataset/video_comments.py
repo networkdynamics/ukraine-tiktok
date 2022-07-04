@@ -54,7 +54,7 @@ def main():
                         json.dump(comments, f)
                 finished = True
         except Exception:
-            time.sleep(600)
+            time.sleep(1800)
 
 
 if __name__ == '__main__':
