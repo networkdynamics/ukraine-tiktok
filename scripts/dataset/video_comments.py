@@ -1,6 +1,8 @@
 import argparse
+from csv import excel
 import json
 import os
+import random
 import time
 
 import tqdm
@@ -28,11 +30,12 @@ def main():
         os.mkdir(comments_dir_path)
 
     delay = 2
-
     finished = False
+
     while not finished:
+        random.shuffle(videos)
         try:
-            with TikTokApi(request_delay=delay) as api:
+            with TikTokApi(request_delay=delay, headless=True) as api:
                 for video in tqdm.tqdm(videos):
 
                     comment_dir_path = os.path.join(comments_dir_path, video['id'])
@@ -49,10 +52,10 @@ def main():
 
                     with open(comment_file_path, 'w') as f:
                         json.dump(comments, f)
-
                 finished = True
         except Exception:
             time.sleep(600)
+
 
 if __name__ == '__main__':
     main()

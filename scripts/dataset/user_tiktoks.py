@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import random
 import time
 
 import tqdm
@@ -28,12 +29,14 @@ def main():
     if not os.path.exists(users_dir_path):
         os.mkdir(users_dir_path)
 
-    delay = 10
+    users = list(users)
 
+    delay = 10
     finished = False
     while not finished:
+        random.shuffle(users)
         try:
-            with TikTokApi(request_delay=delay) as api:
+            with TikTokApi(request_delay=delay, headless=True) as api:
                 for username in tqdm.tqdm(users):
 
                     user_dir_path = os.path.join(users_dir_path, username)
@@ -50,7 +53,7 @@ def main():
 
                     with open(user_file_path, 'w') as f:
                         json.dump(user_videos, f)
-                
+
                 finished = True
         except Exception:
             time.sleep(600)
