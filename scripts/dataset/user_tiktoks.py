@@ -31,7 +31,7 @@ def main():
 
     users = list(users)
 
-    delay = 10
+    delay = 15
     finished = False
     while not finished:
         random.shuffle(users)
@@ -56,7 +56,7 @@ def main():
 
                 finished = True
         except Exception:
-            time.sleep(1800)
+            time.sleep(3600)
 
 if __name__ == '__main__':
     main()
