@@ -7,16 +7,17 @@ from TikTokApi import TikTokApi
 
 def main():
     #hashtags = ['standwithukraine', 'russia', 'nato', 'putin', 'moscow', 'zelenskyy', 'stopwar', 'stopthewar', 'ukrainewar', 'ww3']
-    hashtags = ['володимирзеленський', 'славаукраїні', 'путінхуйло', 'россия', 
-    'війнавукраїні', 'зеленський', 'нівійні', 'війна', 'нетвойне', 'зеленский', 'путинхуйло']
+    #hashtags = ['володимирзеленський', 'славаукраїні', 'путінхуйло🔴⚫🇺🇦', 'россия', 
+    #'війнавукраїні', 'зеленський', 'нівійні', 'війна', 'нетвойне', 'зеленский', 'путинхуйло']
+    hashtags = ['denazification', 'specialmilitaryoperation', 'africansinukraine', 'putinspeech', 'whatshappeninginukraine']
     
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
-    data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
+    data_dir_path = os.path.join(this_dir_path, '..', '..', 'data', 'hashtags')
 
     #finished = False
     #while not finished:
         #try:
-    with TikTokApi(headless=True) as api:
+    with TikTokApi(headless=False) as api:
         for hashtag in hashtags:
 
             file_path = os.path.join(data_dir_path, f"#{hashtag}_videos.json")

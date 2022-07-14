@@ -10,8 +10,11 @@ import tqdm
 
 def main():
 
-    file_hashtags = ['ukraine', 'standwithukraine', 'russia', 'nato', 'putin', 'moscow', 'zelenskyy', 'stopwar', 'stopthewar', 'ukrainewar', 'ww3']
-    
+    #file_hashtags = ['ukraine', 'standwithukraine', 'russia', 'nato', 'putin', 'moscow', 'zelenskyy', 'stopwar', 'stopthewar', 'ukrainewar', 'ww3']
+    #file_hashtags = ['володимирзеленський', 'славаукраїні', 'путінхуйло🔴⚫🇺🇦', 'россия', 
+    #'війнавукраїні', 'зеленський', 'нівійні', 'війна', 'нетвойне', 'зеленский', 'путинхуйло']
+    file_hashtags = ['denazification', 'specialmilitaryoperation', 'africansinukraine', 'putinspeech', 'whatshappeninginukraine']
+
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
 
@@ -27,18 +30,35 @@ def main():
     hashtag_regex = '#\S+'
     vids_data = [(video['desc'], datetime.fromtimestamp(video['createTime']), re.findall(hashtag_regex, video['desc'])) for video in videos]
 
+    NUM_TOP_HASHTAGS = 20
+
     video_df = pd.DataFrame(vids_data, columns=['desc', 'createtime', 'hashtags'])
     hashtags_df = video_df.explode('hashtags')
 
-    top_hashtags_df = hashtags_df.groupby('hashtags')['desc'].count().sort_values(ascending=False).head(100)
-    top_hashtags = set(top_hashtags_df.index)
+    filter_method = 'top'
+    if filter_method == 'top':
+        top_hashtags_df = hashtags_df.groupby('hashtags')['desc'].count().sort_values(ascending=False).head(NUM_TOP_HASHTAGS)
+        top_hashtags = set(top_hashtags_df.index)
 
-    df = hashtags_df[hashtags_df['hashtags'].isin(top_hashtags)].groupby(['hashtags', pd.Grouper(key='createtime', freq='W')]) \
+        filtered_hashtags_df = hashtags_df[hashtags_df['hashtags'].isin(top_hashtags)]
+
+    elif filter_method == 'russiavsukraine':
+        russiavukraine_words = ['зеленский', 'путинхуйло', 'зеленський', 'путінхуйло']
+        russiavukraine = [f"#{word}" for word in russiavukraine_words]
+        filtered_hashtags_df = hashtags_df[hashtags_df['hashtags'].isin(russiavukraine)]
+
+    df = filtered_hashtags_df.groupby(['hashtags', pd.Grouper(key='createtime', freq='W')]) \
        .count() \
        .reset_index() \
        .sort_values('createtime')
 
-    df = df.pivot_table(index=['createtime'], columns=['hashtags'], fill_value=0)
+    start_date = datetime(2022, 1, 1)
+    end_date = datetime(2022, 12, 1)
+
+    df = df[df['createtime'] > start_date]
+    df = df[df['createtime'] < end_date]
+
+    df = df.pivot_table(index=['createtime'], columns=['hashtags'], fill_value=0).droplevel(0, axis=1)
 
     df.plot()
     plt.show()

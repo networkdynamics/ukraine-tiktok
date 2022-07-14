@@ -4,25 +4,21 @@ import os
 
 from TikTokApi import TikTokApi
 
-def main(args):
+def main():
+    keywords = ['ukraine']
     video_data = []
 
-    with TikTokApi() as api:
-        for video in api.search.videos(args.search, count=100):
-            video_data.append(video.info())
+    this_dir_path = os.path.dirname(os.path.abspath(__file__))
+    data_dir_path = os.path.join(this_dir_path, '..', '..', 'data', 'searches')
 
-    dir_path = os.path.dirname(args.out_path)
-    if not os.path.exists(dir_path):
-        os.mkdir(dir_path)
+    for keyword in keywords:
+        with TikTokApi() as api:
+            for video in api.search(keyword).videos(count=100):
+                video_data.append(video.info())
 
-    with open(args.out_path, 'w') as f:
-        json.dump(video_data, f)
+        file_path = os.path.join(data_dir_path, f"{keyword}_videos.json")
+        with open(file_path, 'w') as f:
+            json.dump(video_data, f)
 
 if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--search')
-    parser.add_argument('--out-path')
-    args = parser.parse_args()
-
-    main(args)
+    main()
