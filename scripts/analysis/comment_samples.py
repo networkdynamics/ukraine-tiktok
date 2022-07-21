@@ -2,7 +2,6 @@ from datetime import datetime
 import json
 import os
 
-import networkx as nx
 import pandas as pd
 import tqdm
 
@@ -45,7 +44,6 @@ def main():
         ))
 
     comment_df = pd.DataFrame(comments_data, columns=['createtime', 'author', 'text', 'video_id'])
-    count_comments_df = comment_df.groupby('author')[['createtime']].count().reset_index().rename(columns={'createtime': 'comment_count'})
 
     hashtag_dir_path = os.path.join(data_dir_path, 'hashtags')
     searches_dir_path = os.path.join(data_dir_path, 'searches')
@@ -71,39 +69,13 @@ def main():
 
     video_df = pd.DataFrame(vids_data, columns=['id', 'createtime', 'author', 'desc', 'hashtags'])
     video_df = video_df.drop_duplicates('id')
-    count_vids_df = video_df.groupby('author')[['createtime']].count().reset_index().rename(columns={'createtime': 'video_count'})
 
-    counts_df = count_vids_df.merge(count_comments_df, how='outer', on='author')
-
-    print(f"Number of users captured: {len(counts_df)}")
-    print(f"Number of users who posted a video and no comment: {len(counts_df[(counts_df['comment_count'].isnull()) & (counts_df['video_count'] > 0)])}")
-    print(f"Number of users who posted a comment and no video: {len(counts_df[(counts_df['comment_count'] > 0) & (counts_df['video_count'].isnull())])}")
-    print(f"Number of users who posted a comment and posted a video: {len(counts_df[(counts_df['comment_count'] > 0) & (counts_df['video_count'] > 0)])}")
-    print(f"Mean number of comments per author: {counts_df['comment_count'].mean()}")
-    print(f"Mean number of videos per author: {counts_df['video_count'].mean()}")
-
-    interactions_df = video_df.rename(columns={'createtime': 'video_createtime', 'id': 'video_id', 'author': 'video_author', 'desc': 'video_desc', 'hashtags': 'video_hashtags'}) \
+    video_comments_df = video_df.rename(columns={'createtime': 'video_createtime', 'id': 'video_id', 'author': 'video_author', 'desc': 'video_desc', 'hashtags': 'video_hashtags'}) \
         .merge(comment_df.rename(columns={'createtime': 'comment_createtime', 'author': 'comment_author', 'text': 'comment_text'}), on='video_id')
 
-    users = counts_df['author'].values
+    specific_df = video_comments_df[(video_comments_df['video_hashtags'].apply(lambda hashtags: 'ukraine' in hashtags)) & (video_comments_df['comment_text'].str.contains('tranh'))][['video_desc', 'comment_text']]
 
-    graph = nx.MultiDiGraph()
-
-    graph_type = 'homogeneous'
-
-    if graph_type == 'homogeneous':
-        graph.add_nodes_from(users)
-
-        interactions_df['edge_data'] = interactions_df[['comment_createtime', 'video_hashtags', 'comment_text']].apply(dict, axis=1)
-        edges_df = interactions_df[['comment_author', 'video_author', 'edge_data']]
-        edges = list(edges_df.itertuples(index=False, name=None))
-        graph.add_edges_from(edges)
-
-    elif graph_type == 'heterogeneous':
-        graph.add_nodes_from()
-        graph.add_edges_from()
-
-    # TODO write to file
+    print(specific_df.head())
 
 if __name__ == '__main__':
     main()
