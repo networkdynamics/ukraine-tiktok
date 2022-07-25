@@ -33,28 +33,33 @@ def main():
             comments = json.load(f)
 
         for comment in comments:
-            if isinstance(comment['user'], str):
-                author = comment['user']
-            elif isinstance(comment['user'], dict):
-                if 'unique_id' in comment['user']:
-                    author = comment['user']['unique_id']
-                elif 'uniqueId' in comment['user']:
-                    author = comment['user']['uniqueId']
+            comment_user = comment['user']
+            if isinstance(comment_user, str):
+                continue
+            elif isinstance(comment_user, dict):
+                if 'unique_id' in comment_user:
+                    author_id = comment_user['uid']
+                    author_name = comment_user['unique_id']
+                elif 'uniqueId' in comment_user:
+                    author_id = comment_user['id']
+                    author_name = comment_user['uniqueId']
                 else:
-                    author = comment['user']['uid']
+                    author_name = None
+                    author_id = comment_user['uid']
             else:
                 raise Exception()
 
             comments_data.append((
                 comment['cid'],
                 datetime.fromtimestamp(comment['create_time']), 
-                author, 
+                author_name,
+                author_id, 
                 comment['text'],
                 comment['aweme_id']
             ))
 
-    comment_df = pd.DataFrame(comments_data, columns=['comment_id', 'createtime', 'author', 'text', 'video_id'])
-    count_comments_df = comment_df.groupby('author')[['createtime']].count().reset_index().rename(columns={'createtime': 'comment_count'})
+    comment_df = pd.DataFrame(comments_data, columns=['comment_id', 'createtime', 'author_name', 'author_id', 'text', 'video_id'])
+    count_comments_df = comment_df.groupby('author_id')[['createtime']].count().reset_index().rename(columns={'createtime': 'comment_count'})
 
     hashtag_dir_path = os.path.join(data_dir_path, 'hashtags')
     searches_dir_path = os.path.join(data_dir_path, 'searches')
@@ -71,17 +76,18 @@ def main():
                 video['id'],
                 datetime.fromtimestamp(video['createTime']), 
                 video['author']['uniqueId'], 
+                video['author']['id'],
                 video['desc'], 
                 [challenge['title'] for challenge in video.get('challenges', [])]
             ) 
             for video in videos
         ]
 
-    video_df = pd.DataFrame(vids_data, columns=['video_id', 'createtime', 'author', 'desc', 'hashtags'])
+    video_df = pd.DataFrame(vids_data, columns=['video_id', 'createtime', 'author_name', 'author_id', 'desc', 'hashtags'])
     video_df = video_df.drop_duplicates('video_id')
-    count_vids_df = video_df.groupby('author')[['createtime']].count().reset_index().rename(columns={'createtime': 'video_count'})
+    count_vids_df = video_df.groupby('author_id')[['createtime']].count().reset_index().rename(columns={'createtime': 'video_count'})
 
-    counts_df = count_vids_df.merge(count_comments_df, how='outer', on='author').fillna(0)
+    counts_df = count_vids_df.merge(count_comments_df, how='outer', on='author_id').fillna(0)
     counts_df[['video_count', 'comment_count']] = counts_df[['video_count', 'comment_count']].astype(int)
 
     print(f"Number of users captured: {len(counts_df)}")
@@ -91,7 +97,7 @@ def main():
     print(f"Mean number of comments per author: {counts_df['comment_count'].mean()}")
     print(f"Mean number of videos per author: {counts_df['video_count'].mean()}")
 
-    interactions_df = video_df.rename(columns={'createtime': 'video_createtime', 'author': 'video_author', 'desc': 'video_desc', 'hashtags': 'video_hashtags'}) \
+    interactions_df = video_df.rename(columns={'createtime': 'video_createtime', 'author_name': 'video_author_name', 'author_id': 'video_author_id', 'desc': 'video_desc', 'hashtags': 'video_hashtags'}) \
         .merge(comment_df.rename(columns={'createtime': 'comment_createtime', 'author': 'comment_author', 'text': 'comment_text'}), on='video_id')
 
     user_ids = set(counts_df['author'].values)
@@ -143,9 +149,11 @@ def main():
     # write to file
     graph_data = nx.readwrite.node_link_data(graph)
 
-    graph_path = os.path.join(data_dir_path, 'graph_data.json')
+    graph_path = os.path.join(data_dir_path, 'raw_graph', 'graph_data.json')
     with open(graph_path, 'w') as f:
         json.dump(graph_data, f)
+
+    print("Written new comment graph to file.")
 
 if __name__ == '__main__':
     main()
