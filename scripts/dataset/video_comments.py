@@ -14,11 +14,14 @@ def main():
     
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
-    search_dir_path = os.path.join(data_dir_path, 'searches')
+
+    hashtag_dir_path = os.path.join(data_dir_path, 'hashtags')
+    searches_dir_path = os.path.join(data_dir_path, 'searches')
+    file_paths = [os.path.join(hashtag_dir_path, file_name) for file_name in os.listdir(hashtag_dir_path)] \
+               + [os.path.join(searches_dir_path, file_name) for file_name in os.listdir(searches_dir_path)]
 
     videos = []
-    for search_file_name in os.listdir(search_dir_path):
-        file_path = os.path.join(search_dir_path, search_file_name)
+    for file_path in file_paths:
         with open(file_path, 'r') as f:
             video_data = json.load(f)
 
