@@ -38,13 +38,14 @@ def main():
             raise Exception()
 
         comments_data.append((
+            comment['id'],
             datetime.fromtimestamp(comment['create_time']), 
             author, 
             comment['text'],
             comment['aweme_id']
         ))
 
-    comment_df = pd.DataFrame(comments_data, columns=['createtime', 'author', 'text', 'video_id'])
+    comment_df = pd.DataFrame(comments_data, columns=['id', 'createtime', 'author', 'text', 'video_id'])
     count_comments_df = comment_df.groupby('author')[['createtime']].count().reset_index().rename(columns={'createtime': 'comment_count'})
 
     hashtag_dir_path = os.path.join(data_dir_path, 'hashtags')
@@ -85,7 +86,9 @@ def main():
     interactions_df = video_df.rename(columns={'createtime': 'video_createtime', 'id': 'video_id', 'author': 'video_author', 'desc': 'video_desc', 'hashtags': 'video_hashtags'}) \
         .merge(comment_df.rename(columns={'createtime': 'comment_createtime', 'author': 'comment_author', 'text': 'comment_text'}), on='video_id')
 
-    users = counts_df['author'].values
+    user_ids = set(counts_df['author'].values)
+    video_ids = set(interactions_df['video_id'].values)
+    comment_ids = set(interactions_df['comment_id'])
 
     graph = nx.MultiDiGraph()
 
