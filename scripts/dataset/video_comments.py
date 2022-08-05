@@ -37,7 +37,7 @@ def main():
     finished = False
 
     while not finished:
-        #random.shuffle(videos)
+        random.shuffle(videos)
         try:
             with TikTokApi(request_delay=delay, headless=True) as api:
                 for video in tqdm.tqdm(videos):
