@@ -17,42 +17,49 @@ def main():
     videos = []
     for hashtag in hashtags:
         print(f"Getting hashtag users: {hashtag}")
-        file_path = os.path.join(data_dir_path, f"#{hashtag}_videos.json")
+        file_path = os.path.join(data_dir_path, 'hashtags', f"#{hashtag}_videos.json")
         with open(file_path, 'r') as f:
             video_data = json.load(f)
 
         videos += video_data
 
+    videos = [{
+        'id': '7120221075807587630',
+        'author': {
+            'uniqueId': 'ed_toks1'
+        }
+    }]
+
     comments_dir_path = os.path.join(data_dir_path, "comments")
     if not os.path.exists(comments_dir_path):
         os.mkdir(comments_dir_path)
 
-    delay = 2
+    delay = 0
     finished = False
 
-    while not finished:
-        random.shuffle(videos)
-        try:
-            with TikTokApi(request_delay=delay, headless=True) as api:
-                for video in tqdm.tqdm(videos):
+    #while not finished:
+    #    random.shuffle(videos)
+    #    try:
+    with TikTokApi(request_delay=delay, headless=False) as api:
+        for video in tqdm.tqdm(videos):
 
-                    comment_dir_path = os.path.join(comments_dir_path, video['id'])
-                    if not os.path.exists(comment_dir_path):
-                        os.mkdir(comment_dir_path)
+            comment_dir_path = os.path.join(comments_dir_path, video['id'])
+            if not os.path.exists(comment_dir_path):
+                os.mkdir(comment_dir_path)
 
-                    comment_file_path = os.path.join(comment_dir_path, f"video_comments.json")
-                    if os.path.exists(comment_file_path):
-                        continue
+            comment_file_path = os.path.join(comment_dir_path, f"video_comments.json")
+            if os.path.exists(comment_file_path):
+                continue
 
-                    comments = []
-                    for comment in api.video(id=video['id'], username=video['author']['uniqueId']).comments(count=1000):
-                        comments.append(comment)
+            comments = []
+            for comment in api.video(id=video['id'], username=video['author']['uniqueId']).comments(count=1000):
+                comments.append(comment)
 
-                    with open(comment_file_path, 'w') as f:
-                        json.dump(comments, f)
-                finished = True
-        except Exception:
-            time.sleep(1800)
+            with open(comment_file_path, 'w') as f:
+                json.dump(comments, f)
+        finished = True
+        #except Exception as e:
+        #    time.sleep(1800)
 
 
 if __name__ == '__main__':
