@@ -3,8 +3,9 @@ import json
 import os
 import re
 
-import octis
-from topicx import baselines
+from octis.dataset.dataset import Dataset
+from topicx.baselines.cetopictm import CETopicTM
+from topicx.baselines.lda import LDATM
 import gensim
 from gensim.models.phrases import Phrases, ENGLISH_CONNECTOR_WORDS
 import ftlangdetect
@@ -193,72 +194,46 @@ def main():
             
 
     comment_df = pd.DataFrame(comments_data, columns=['comment_id', 'createtime', 'author_name', 'author_id', 'text', 'video_id'])
+
     comment_df['text_no_newlines'] = comment_df['text'].str.replace(r'\n',  ' ', regex=True)
+    regex_whitespace = '^[\s ︎]+$' # evil weird whitespace character
+    comment_df = comment_df[~comment_df['text_no_newlines'].str.fullmatch(regex_whitespace)]
 
     # get only english comments
     comment_df['english'] = comment_df['text_no_newlines'].apply(check_english)
     english_comments_df = comment_df[comment_df['english']]
+    corpus = [doc.split() for doc in english_comments_df['text_no_newlines']]
 
-    # tokenize
-    english_comments_df['tokens'] = english_comments_df['text_no_newlines'].apply(gensim.utils.simple_preprocess)
+    dataset = Dataset(corpus)
 
-    
-
-    # Add bigrams and trigrams to docs
-    ngrams = NGrams(english_comments_df['tokens'].values)
-    english_comments_df['ngram_tokens'] = english_comments_df['tokens'].apply(ngrams.add_ngrams)
-
-    # lemmatize
-    lemmatizer = Lemmatizer()
-    english_comments_df['lemmatized_tokens'] = english_comments_df['ngram_tokens'].apply(lemmatizer.lemmatize)
-
-    # remove stop words
-    stopword_remover = StopwordRemover()
-    english_comments_df['no_stopwords_tokens'] = english_comments_df['lemmatized_tokens'].apply(stopword_remover.remove_stopwords)
-
-    final_comments_df = english_comments_df[english_comments_df['no_stopwords_tokens'].astype(bool)]
-
-    eng_raw_docs = list(final_comments_df['text_no_newlines'].values)
-    docs = list(final_comments_df['no_stopwords_tokens'].values)
-
-    # Create a corpus from a list of texts
-    comments_dictionary = gensim.corpora.dictionary.Dictionary(docs)
-    comments_dictionary.filter_extremes(no_below=20, no_above=0.5)
-
-    comments_corpus = [comments_dictionary.doc2bow(text) for text in docs]
-
-    # Make an index to word dictionary.
-    _ = comments_dictionary[0]  # This is only to "load" the dictionary.
-    id2word = comments_dictionary.id2token
-    
 
     # Train the model on the corpus.
     #for num_topics in [4, 6, 8, 10, 12, 14, 16]:
     num_topics = 6
+    topic_model = 'cetopic'
+    seed = 42
+    dim_size = -1
+    word_select_method = 'tfidf_idfi'
+    pretrained_model = 'bert-base-uncased'
 
-    lda = gensim.models.ldamulticore.LdaMulticore(comments_corpus, num_topics=num_topics, id2word=id2word)
+    if topic_model == 'cetopic':
+        tm = CETopicTM(dataset=dataset, 
+                       topic_model=topic_model, 
+                       num_topics=num_topics, 
+                       dim_size=dim_size, 
+                       word_select_method=word_select_method,
+                       embedding=pretrained_model, 
+                       seed=seed)
+    elif topic_model == 'lda':
+        tm = LDATM(dataset, topic_model, num_topics)
 
-    # determine most topic focused documents
-    lda_top_topic = LDATopTopic(lda)
-    topic_docs = [lda_top_topic.get_top_topic(raw_doc, tokens, bow) for raw_doc, tokens, bow in zip(eng_raw_docs, docs, comments_corpus)]
+    tm.train()
+    td_score, cv_score, npmi_score = tm.evaluate()
+    print(f'Model {topic_model} num_topics: {num_topics} td: {td_score} npmi: {npmi_score} cv: {cv_score}')
+    
+    topics = tm.get_topics()
+    print(f'Topics: {topics}')
 
-    topics = lda.show_topics(formatted=False)
-    print(f"Num topics: {num_topics}")
-    for topic in topics:
-        topic_num = topic[0]
-        print(f"Topic number: {topic_num}")
-        topic_terms = topic[1]
-        for term in topic_terms:
-            #print(f"Term: {term[0]}, Translation: {MEANINGS.get(term[0], 'Not Found')}, Probability: {term[1]}")
-            print(f"Term: {term[0]}, Probability: {term[1]}")
-        
-        # print most emblematic comments
-        topic_comments = [topic_doc for topic_doc in topic_docs if topic_doc[2] == topic_num]
-        topic_comments = [topic_doc for topic_doc in topic_docs if not check_for_repeating_tokens(topic_doc[1])]
-        topic_top_comments = sorted(topic_comments, key=lambda tup: tup[3], reverse=True)[:10]
-        print("Top comments")
-        for topic_top_comment in topic_top_comments:
-            print(topic_top_comment[0])
 
 if __name__ == '__main__':
     main()
