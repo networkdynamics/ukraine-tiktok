@@ -206,7 +206,6 @@ def main():
 
     dataset = Dataset(corpus)
 
-
     # Train the model on the corpus.
     #for num_topics in [4, 6, 8, 10, 12, 14, 16]:
     num_topics = 6

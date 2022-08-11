@@ -10,10 +10,9 @@ import tqdm
 
 def main():
 
-    #file_hashtags = ['ukraine', 'standwithukraine', 'russia', 'nato', 'putin', 'moscow', 'zelenskyy', 'stopwar', 'stopthewar', 'ukrainewar', 'ww3']
-    #file_hashtags = ['володимирзеленський', 'славаукраїні', 'путінхуйло🔴⚫🇺🇦', 'россия', 
-    #'війнавукраїні', 'зеленський', 'нівійні', 'війна', 'нетвойне', 'зеленский', 'путинхуйло']
-    file_hashtags = ['denazification', 'specialmilitaryoperation', 'africansinukraine', 'putinspeech', 'whatshappeninginukraine']
+    file_hashtags = ['ukraine', 'standwithukraine', 'russia', 'nato', 'putin', 'moscow', 'zelenskyy', 'stopwar', 'stopthewar', 'ukrainewar', 'ww3' \
+        'володимирзеленський', 'славаукраїні', 'путінхуйло🔴⚫🇺🇦', 'россия', 'війнавукраїні', 'зеленський', 'нівійні', 'війна', 'нетвойне', \
+        'зеленский', 'путинхуйло', 'denazification', 'specialmilitaryoperation', 'africansinukraine', 'putinspeech', 'whatshappeninginukraine']
 
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
@@ -27,15 +26,14 @@ def main():
 
         videos += video_data
 
-    hashtag_regex = '#\S+'
-    vids_data = [(video['desc'], datetime.fromtimestamp(video['createTime']), re.findall(hashtag_regex, video['desc'])) for video in videos]
+    vids_data = [(video['desc'], datetime.fromtimestamp(video['createTime']), [challenge['title'] for challenge in video.get('challenges', [])]) for video in videos]
 
     NUM_TOP_HASHTAGS = 20
 
     video_df = pd.DataFrame(vids_data, columns=['desc', 'createtime', 'hashtags'])
     hashtags_df = video_df.explode('hashtags')
 
-    filter_method = 'top'
+    filter_method = 'russiavsukraine'
     if filter_method == 'top':
         top_hashtags_df = hashtags_df.groupby('hashtags')['desc'].count().sort_values(ascending=False).head(NUM_TOP_HASHTAGS)
         top_hashtags = set(top_hashtags_df.index)
