@@ -27,6 +27,13 @@ def main():
 
         videos += video_data
 
+    videos = [{
+        'id': '7120221075807587630',
+        'author': {
+            'uniqueId': 'ed_toks1'
+        }
+    }]
+
     comments_dir_path = os.path.join(data_dir_path, "comments")
     if not os.path.exists(comments_dir_path):
         os.mkdir(comments_dir_path)

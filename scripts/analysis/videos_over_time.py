@@ -19,8 +19,7 @@ def main():
 
         videos += video_data
 
-    hashtag_regex = '#\S+'
-    vids_data = [(video['desc'], datetime.fromtimestamp(video['createTime']), re.findall(hashtag_regex, video['desc'])) for video in videos]
+    vids_data = [(video['desc'], datetime.fromtimestamp(video['createTime']), [challenge['title'] for challenge in video.get('challenges', [])]) for video in videos]
 
     NUM_TOP_HASHTAGS = 100
 

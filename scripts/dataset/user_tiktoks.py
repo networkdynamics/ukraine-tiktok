@@ -18,7 +18,7 @@ def main():
     users = set()
     for hashtag in hashtags:
         print(f"Getting hashtag users: {hashtag}")
-        file_path = os.path.join(data_dir_path, f"#{hashtag}_videos.json")
+        file_path = os.path.join(data_dir_path, 'hashtags', f"#{hashtag}_videos.json")
         with open(file_path, 'r') as f:
             video_data = json.load(f)
 
