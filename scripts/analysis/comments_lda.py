@@ -202,8 +202,6 @@ def main():
     # tokenize
     english_comments_df['tokens'] = english_comments_df['text_no_newlines'].apply(gensim.utils.simple_preprocess)
 
-    
-
     # Add bigrams and trigrams to docs
     ngrams = NGrams(english_comments_df['tokens'].values)
     english_comments_df['ngram_tokens'] = english_comments_df['tokens'].apply(ngrams.add_ngrams)
@@ -216,6 +214,7 @@ def main():
     stopword_remover = StopwordRemover()
     english_comments_df['no_stopwords_tokens'] = english_comments_df['lemmatized_tokens'].apply(stopword_remover.remove_stopwords)
 
+    # get rid of empty now empty docs
     final_comments_df = english_comments_df[english_comments_df['no_stopwords_tokens'].astype(bool)]
 
     eng_raw_docs = list(final_comments_df['text_no_newlines'].values)

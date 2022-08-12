@@ -15,7 +15,8 @@ def main():
         'зеленский', 'путинхуйло', 'denazification', 'specialmilitaryoperation', 'africansinukraine', 'putinspeech', 'whatshappeninginukraine']
 
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
-    data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
+    root_dir_path = os.path.join(this_dir_path, '..', '..')
+    data_dir_path = os.path.join(root_dir_path, 'data')
 
     videos = []
     for hashtag in file_hashtags:
@@ -59,7 +60,10 @@ def main():
     df = df.pivot_table(index=['createtime'], columns=['hashtags'], fill_value=0).droplevel(0, axis=1)
 
     df.plot()
-    plt.show()
+
+    fig_dir_path = os.path.join(root_dir_path, 'figs')
+    fig_path = os.path.join(fig_dir_path, 'hashtags_over_time.png')
+    plt.savefig(fig_path)
 
 
 if __name__ == '__main__':

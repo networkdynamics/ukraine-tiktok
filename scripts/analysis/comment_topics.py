@@ -11,6 +11,7 @@ from gensim.models.phrases import Phrases, ENGLISH_CONNECTOR_WORDS
 import ftlangdetect
 from nltk.corpus import stopwords
 from nltk.stem.wordnet import WordNetLemmatizer
+import numpy as np
 import pandas as pd
 import tqdm
 
@@ -178,6 +179,14 @@ def process_comment(comment):
 def main():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
+
+    embeddings_cache_path = os.path.join(data_dir_path, 'cache', 'comment_embeddings.npy')
+    if os.path.exists(embeddings_cache_path):
+        with open(embeddings_cache_path, 'rb') as f:
+            embeddings = np.load(f)
+    else:
+        embeddings = None
+
     comment_dir_path = os.path.join(data_dir_path, 'comments')
 
     comments_data = []
@@ -192,7 +201,6 @@ def main():
 
         comments_data += [process_comment(comment) for comment in comments]
             
-
     comment_df = pd.DataFrame(comments_data, columns=['comment_id', 'createtime', 'author_name', 'author_id', 'text', 'video_id'])
 
     comment_df['text_no_newlines'] = comment_df['text'].str.replace(r'\n',  ' ', regex=True)
@@ -202,9 +210,29 @@ def main():
     # get only english comments
     comment_df['english'] = comment_df['text_no_newlines'].apply(check_english)
     english_comments_df = comment_df[comment_df['english']]
-    corpus = [doc.split() for doc in english_comments_df['text_no_newlines']]
+    
+    # tokenize
+    english_comments_df['tokens'] = english_comments_df['text_no_newlines'].apply(gensim.utils.simple_preprocess)
 
-    dataset = Dataset(corpus)
+    # Add bigrams and trigrams to docs
+    ngrams = NGrams(english_comments_df['tokens'].values)
+    english_comments_df['ngram_tokens'] = english_comments_df['tokens'].apply(ngrams.add_ngrams)
+
+    # lemmatize
+    lemmatizer = Lemmatizer()
+    english_comments_df['lemmatized_tokens'] = english_comments_df['ngram_tokens'].apply(lemmatizer.lemmatize)
+
+    # remove stop words
+    stopword_remover = StopwordRemover()
+    english_comments_df['no_stopwords_tokens'] = english_comments_df['lemmatized_tokens'].apply(stopword_remover.remove_stopwords)
+
+    # get rid of empty now empty docs
+    final_comments_df = english_comments_df[english_comments_df['no_stopwords_tokens'].astype(bool)]
+
+    eng_raw_docs = list(final_comments_df['text_no_newlines'].values)
+    docs = list(final_comments_df['no_stopwords_tokens'].values)
+
+    dataset = Dataset(docs)
 
     # Train the model on the corpus.
     #for num_topics in [4, 6, 8, 10, 12, 14, 16]:
@@ -226,7 +254,7 @@ def main():
     elif topic_model == 'lda':
         tm = LDATM(dataset, topic_model, num_topics)
 
-    tm.train()
+    tm.train(embeddings=embeddings)
     td_score, cv_score, npmi_score = tm.evaluate()
     print(f'Model {topic_model} num_topics: {num_topics} td: {td_score} npmi: {npmi_score} cv: {cv_score}')
     
