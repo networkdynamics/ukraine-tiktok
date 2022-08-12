@@ -10,18 +10,22 @@ import tqdm
 
 def main():
 
-    file_hashtags = ['ukraine', 'standwithukraine', 'russia', 'nato', 'putin', 'moscow', 'zelenskyy', 'stopwar', 'stopthewar', 'ukrainewar', 'ww3' \
-        'володимирзеленський', 'славаукраїні', 'путінхуйло🔴⚫🇺🇦', 'россия', 'війнавукраїні', 'зеленський', 'нівійні', 'війна', 'нетвойне', \
-        'зеленский', 'путинхуйло', 'denazification', 'specialmilitaryoperation', 'africansinukraine', 'putinspeech', 'whatshappeninginukraine']
+    #file_hashtags = ['ukraine', 'standwithukraine', 'russia', 'nato', 'putin', 'moscow', 'zelenskyy', 'stopwar', 'stopthewar', 'ukrainewar', 'ww3' \
+    #    'володимирзеленський', 'славаукраїні', 'путінхуйло🔴⚫🇺🇦', 'россия', 'війнавукраїні', 'зеленський', 'нівійні', 'війна', 'нетвойне', \
+    #    'зеленский', 'путинхуйло', 'denazification', 'specialmilitaryoperation', 'africansinukraine', 'putinspeech', 'whatshappeninginukraine']
 
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     root_dir_path = os.path.join(this_dir_path, '..', '..')
     data_dir_path = os.path.join(root_dir_path, 'data')
 
+    hashtag_dir_path = os.path.join(data_dir_path, 'hashtags')
+    searches_dir_path = os.path.join(data_dir_path, 'searches')
+    file_paths = [os.path.join(hashtag_dir_path, file_name) for file_name in os.listdir(hashtag_dir_path)] \
+               + [os.path.join(searches_dir_path, file_name) for file_name in os.listdir(searches_dir_path)]
+
+
     videos = []
-    for hashtag in file_hashtags:
-        print(f"Getting hashtag users: {hashtag}")
-        file_path = os.path.join(data_dir_path, f"#{hashtag}_videos.json")
+    for file_path in file_paths:
         with open(file_path, 'r') as f:
             video_data = json.load(f)
 
