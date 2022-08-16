@@ -180,7 +180,7 @@ def main():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
 
-    embeddings_cache_path = os.path.join(data_dir_path, 'cache', 'comment_embeddings.npy')
+    embeddings_cache_path = os.path.join(data_dir_path, 'cache', 'english_comment_twitter_roberta_embeddings.npy')
     if os.path.exists(embeddings_cache_path):
         with open(embeddings_cache_path, 'rb') as f:
             embeddings = np.load(f)
@@ -211,6 +211,10 @@ def main():
     comment_df['english'] = comment_df['text_no_newlines'].apply(check_english)
     english_comments_df = comment_df[comment_df['english']]
     
+    # remove @user 
+    # cardiff nlp model handles user strings
+    #english_comments_df['text_no_users'] = english_comments_df['text_no_newlines'].str.replace('@\S+', '')
+
     # tokenize
     english_comments_df['tokens'] = english_comments_df['text_no_newlines'].apply(gensim.utils.simple_preprocess)
 
@@ -236,12 +240,12 @@ def main():
 
     # Train the model on the corpus.
     #for num_topics in [4, 6, 8, 10, 12, 14, 16]:
-    num_topics = 6
+    num_topics = 11
     topic_model = 'cetopic'
     seed = 42
     dim_size = -1
     word_select_method = 'tfidf_idfi'
-    pretrained_model = 'bert-base-uncased'
+    pretrained_model = 'cardiffnlp/twitter-roberta-base'
 
     if topic_model == 'cetopic':
         tm = CETopicTM(dataset=dataset, 
@@ -255,11 +259,23 @@ def main():
         tm = LDATM(dataset, topic_model, num_topics)
 
     tm.train(embeddings=embeddings)
+
+    if embeddings is None:
+        with open(embeddings_cache_path, 'wb') as f:
+            np.save(f, tm.embeddings)
+
     td_score, cv_score, npmi_score = tm.evaluate()
     print(f'Model {topic_model} num_topics: {num_topics} td: {td_score} npmi: {npmi_score} cv: {cv_score}')
     
     topics = tm.get_topics()
-    print(f'Topics: {topics}')
+
+    distances = tm.distances
+    for topic_num in topics:
+        print(f"Topic number: {topic_num}")
+        print(topics[topic_num])
+        top_topic_comment_idx = np.argsort(distances[:, topic_num])[:10]
+        for idx in top_topic_comment_idx:
+            print(eng_raw_docs[idx])
 
 
 if __name__ == '__main__':
