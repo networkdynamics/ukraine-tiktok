@@ -59,15 +59,29 @@ def main():
     comment_df['text'] = comment_df['text'].str.replace(r'\n',  ' ', regex=True)
     comment_df['language'] = comment_df['text'].apply(get_language)
 
-    language_count_df = comment_df[['language', 'text']].groupby('language') \
-        .count() \
-        .rename(columns={'text': 'language_count'}) \
-        .reset_index() \
-        .sort_values('language_count', ascending=False)
-        
-    top_languages = language_count_df.head(5)['language'].values.tolist()
-    top_languages.append('uk')
-    comment_df = comment_df[comment_df['language'].isin(top_languages)]
+    language_method = 'ukrainian'
+    languages = ['uk', 'ru', 'en']
+
+    if language_method == 'top':
+        language_count_df = comment_df[['language', 'text']].groupby('language') \
+            .count() \
+            .rename(columns={'text': 'language_count'}) \
+            .reset_index() \
+            .sort_values('language_count', ascending=False)
+            
+        top_languages = language_count_df.head(5)['language'].values.tolist()
+        top_languages.append('uk')
+        comment_df = comment_df[comment_df['language'].isin(top_languages)]
+
+    elif language_method == 'ukrainian':
+        comment_df = comment_df[comment_df['language'].notna()]
+        comment_df = comment_df[comment_df['author'].notna()]
+
+        authors_df = comment_df[['author', 'language']].groupby('author').agg(list).reset_index()
+        authors_df = authors_df[authors_df['language'].str.len() > 1]
+        authors_df = authors_df[authors_df['language'].apply(lambda langs: 'uk' in langs)]
+
+        comment_df = comment_df.merge(authors_df[['author']], how='inner', on='author')
 
     all_count_df = comment_df[['createtime', 'text']].groupby(pd.Grouper(key='createtime', freq='W')) \
         .count() \
@@ -92,6 +106,9 @@ def main():
     all_count_df = all_count_df.set_index('createtime')
     df = df.pivot_table(index=['createtime'], columns=['language'], fill_value=0).droplevel(0, axis=1)
 
+    if languages:
+        df = df[languages]
+
     # TODO divide by all counts
     df = df.join(all_count_df)
 
@@ -99,10 +116,11 @@ def main():
     language_columns.remove('comment_count')
     df = df[language_columns].div(df['comment_count'], axis=0)
 
-    df.plot()
+    ax = df.plot()
+    ax.legend(loc='right')
 
     fig_dir_path = os.path.join(data_dir_path, '..', 'figs')
-    fig_path = os.path.join(fig_dir_path, 'languages_over_time.png')
+    fig_path = os.path.join(fig_dir_path, f'{language_method}_languages_over_time.png')
     plt.savefig(fig_path)
 
 if __name__ == '__main__':

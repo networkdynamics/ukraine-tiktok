@@ -1,7 +1,7 @@
 from datetime import datetime
 import json
 import os
-import re
+import random
 
 from octis.dataset.dataset import Dataset
 from topicx.baselines.cetopictm import CETopicTM
@@ -240,7 +240,7 @@ def main():
 
     # Train the model on the corpus.
     #for num_topics in [4, 6, 8, 10, 12, 14, 16]:
-    num_topics = 11
+    num_topics = 5
     topic_model = 'cetopic'
     seed = 42
     dim_size = -1
@@ -269,12 +269,18 @@ def main():
     
     topics = tm.get_topics()
 
+    sample_method = 'random'
+
     distances = tm.distances
     for topic_num in topics:
         print(f"Topic number: {topic_num}")
         print(topics[topic_num])
-        top_topic_comment_idx = np.argsort(distances[:, topic_num])[:10]
-        for idx in top_topic_comment_idx:
+        num_sample = 10
+        if sample_method == 'random':
+            comment_idx = random.sample([idx for (idx, topic) in enumerate(tm.topics) if topic == topic_num], num_sample)
+        elif sample_method == 'closest':
+            comment_idx = np.argsort(distances[:, topic_num])[:num_sample]
+        for idx in comment_idx:
             print(eng_raw_docs[idx])
 
 
