@@ -176,16 +176,9 @@ def process_comment(comment):
         comment['aweme_id']
     )
 
-def main():
+def load_comments_df():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
-
-    embeddings_cache_path = os.path.join(data_dir_path, 'cache', 'english_comment_twitter_roberta_embeddings.npy')
-    if os.path.exists(embeddings_cache_path):
-        with open(embeddings_cache_path, 'rb') as f:
-            embeddings = np.load(f)
-    else:
-        embeddings = None
 
     comment_dir_path = os.path.join(data_dir_path, 'comments')
 
@@ -232,6 +225,30 @@ def main():
 
     # get rid of empty now empty docs
     final_comments_df = english_comments_df[english_comments_df['no_stopwords_tokens'].astype(bool)]
+
+    # TODO load from cache
+
+    # use first 1 mil
+    final_comments_df = final_comments_df.iloc[:1000000]
+
+
+def main():
+    this_dir_path = os.path.dirname(os.path.abspath(__file__))
+    data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
+
+    df_path = os.path.join(data_dir_path, 'cache', 'one_mil_english_comments.csv')
+    if os.path.exists(df_path):
+        final_comments_df = pd.read_csv(df_path)
+        final_comments_df['no_stopwords_tokens'] = final_comments_df['no_stopwords_tokens'].str[1:-1].str.split(',')
+    else:
+        final_comments_df = load_comments_df()
+
+    embeddings_cache_path = os.path.join(data_dir_path, 'cache', 'english_comment_twitter_roberta_embeddings.npy')
+    if os.path.exists(embeddings_cache_path):
+        with open(embeddings_cache_path, 'rb') as f:
+            embeddings = np.load(f)
+    else:
+        embeddings = None
 
     eng_raw_docs = list(final_comments_df['text_no_newlines'].values)
     docs = list(final_comments_df['no_stopwords_tokens'].values)

@@ -7,15 +7,9 @@ import pandas as pd
 import tqdm
 import ftlangdetect
 
-def get_language(text):
-    try:
-        result = ftlangdetect.detect(text)
-        return result['lang']
-    except Exception as e:
-        if str(e) == 'No features in text.':
-            return None
-        else:
-            raise Exception('Unknown error')
+def where_contains_words(df, words):
+    regexes = [f".*{word}.*" for word in words]
+    return df[df['text'].str.contains(regexes, case=False)]
 
 def main():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
@@ -57,37 +51,17 @@ def main():
 
     comment_df = pd.DataFrame(comments_data, columns=['createtime', 'author', 'text', 'video_id'])
     comment_df['text'] = comment_df['text'].str.replace(r'\n',  ' ', regex=True)
-    comment_df['language'] = comment_df['text'].apply(get_language)
 
-    language_method = 'ru_n_uk'
+    word_method = 'countries'
     time_span = 'broad'
 
-    if language_method == 'top':
-        language_count_df = comment_df[['language', 'text']].groupby('language') \
-            .count() \
-            .rename(columns={'text': 'language_count'}) \
-            .reset_index() \
-            .sort_values('language_count', ascending=False)
-            
-        top_languages = language_count_df.head(5)['language'].values.tolist()
-        top_languages.append('uk')
-        comment_df = comment_df[comment_df['language'].isin(top_languages)]
+    if word_method == 'countries':
+        countries = ['russia', 'ukraine', 'usa', 'united states', 'uk', 'united kingdom', 'france', 'germany']
+        comment_df = where_contains_words(comment_df, countries)
 
-    elif language_method == 'ukrainian':
-        comment_df = comment_df[comment_df['language'].notna()]
-        comment_df = comment_df[comment_df['author'].notna()]
-        languages = ['uk', 'ru', 'en']
-        comment_df = comment_df[comment_df['language'].isin(languages)]
-
-        authors_df = comment_df[['author', 'language']].groupby('author').agg(list).reset_index()
-        authors_df = authors_df[authors_df['language'].str.len() > 1]
-        authors_df = authors_df[authors_df['language'].apply(lambda langs: 'uk' in langs)]
-
-        comment_df = comment_df.merge(authors_df[['author']], how='inner', on='author')
-
-    elif language_method == 'ru_n_uk':
-        languages = ['uk', 'ru']
-        comment_df = comment_df[comment_df['language'].isin(languages)]
+    elif word_method == 'leaders':
+        leaders = ['putin', 'zelensky', 'boris', 'biden', 'trump', 'macron', 'scholz']
+        comment_df = where_contains_words(comment_df, leaders)
 
 
     if time_span == 'broad':
@@ -130,7 +104,7 @@ def main():
     ax.legend(loc='right')
 
     fig_dir_path = os.path.join(data_dir_path, '..', 'figs')
-    fig_path = os.path.join(fig_dir_path, f'{language_method}_languages_over_time_{time_span}.png')
+    fig_path = os.path.join(fig_dir_path, f'{word_method}_words_over_time_{time_span}.png')
     plt.savefig(fig_path)
 
 if __name__ == '__main__':
