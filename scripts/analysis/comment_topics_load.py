@@ -2,6 +2,7 @@ from datetime import datetime
 import json
 import os
 import random
+import re
 
 from octis.dataset.dataset import Dataset
 from topicx.baselines.cetopictm import CETopicTM
@@ -90,6 +91,16 @@ MEANINGS = {
     'зсу': "Armed forces of Ukraine",
     'CapCut': "Video Editor",
 }
+
+def preprocess(raw_text):
+    text = gensim.utils.to_unicode(raw_text, 'utf8', errors='ignore')
+    text = text.lower()
+    text = gensim.utils.deaccent(text)
+    text = re.sub('@[^ ]+', '@user', text)
+    text = re.sub('http[^ ]+', 'http', text)
+    tokens = [t.strip() for t in re.split(r'([@a-z0-9]+)', text) if t.strip() != '']
+    return tokens
+
 
 def check_english(text):
     try:
@@ -209,7 +220,7 @@ def load_comments_df():
     #english_comments_df['text_no_users'] = english_comments_df['text_no_newlines'].str.replace('@\S+', '')
 
     # tokenize
-    english_comments_df['tokens'] = english_comments_df['text_no_newlines'].apply(gensim.utils.simple_preprocess)
+    english_comments_df['tokens'] = english_comments_df['text_no_newlines'].apply(preprocess)
 
     # Add bigrams and trigrams to docs
     ngrams = NGrams(english_comments_df['tokens'].values)
@@ -226,22 +237,21 @@ def load_comments_df():
     # get rid of empty now empty docs
     final_comments_df = english_comments_df[english_comments_df['no_stopwords_tokens'].astype(bool)]
 
-    # TODO load from cache
-
-    # use first 1 mil
-    final_comments_df = final_comments_df.iloc[:1000000]
+    # use first half mil
+    return final_comments_df.iloc[:500000]
 
 
 def main():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
 
-    df_path = os.path.join(data_dir_path, 'cache', 'one_mil_english_comments.csv')
+    df_path = os.path.join(data_dir_path, 'cache', 'half_mil_english_comments.csv')
     if os.path.exists(df_path):
         final_comments_df = pd.read_csv(df_path)
         final_comments_df['no_stopwords_tokens'] = final_comments_df['no_stopwords_tokens'].str[1:-1].str.split(',')
     else:
         final_comments_df = load_comments_df()
+        final_comments_df.to_csv(df_path)
 
     embeddings_cache_path = os.path.join(data_dir_path, 'cache', 'english_comment_twitter_roberta_embeddings.npy')
     if os.path.exists(embeddings_cache_path):
@@ -260,7 +270,7 @@ def main():
     num_topics = 5
     topic_model = 'cetopic'
     seed = 42
-    dim_size = -1
+    dim_size = 3
     word_select_method = 'tfidf_idfi'
     pretrained_model = 'cardiffnlp/twitter-roberta-base'
 
@@ -275,30 +285,11 @@ def main():
     elif topic_model == 'lda':
         tm = LDATM(dataset, topic_model, num_topics)
 
-    tm.train(embeddings=embeddings)
+    tm.get_embeddings()
 
     if embeddings is None:
         with open(embeddings_cache_path, 'wb') as f:
             np.save(f, tm.embeddings)
-
-    td_score, cv_score, npmi_score = tm.evaluate()
-    print(f'Model {topic_model} num_topics: {num_topics} td: {td_score} npmi: {npmi_score} cv: {cv_score}')
-    
-    topics = tm.get_topics()
-
-    sample_method = 'random'
-
-    distances = tm.distances
-    for topic_num in topics:
-        print(f"Topic number: {topic_num}")
-        print(topics[topic_num])
-        num_sample = 10
-        if sample_method == 'random':
-            comment_idx = random.sample([idx for (idx, topic) in enumerate(tm.topics) if topic == topic_num], num_sample)
-        elif sample_method == 'closest':
-            comment_idx = np.argsort(distances[:, topic_num])[:num_sample]
-        for idx in comment_idx:
-            print(eng_raw_docs[idx])
 
 
 if __name__ == '__main__':

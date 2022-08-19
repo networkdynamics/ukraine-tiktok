@@ -8,10 +8,16 @@ import tqdm
 import ftlangdetect
 
 def where_contains_words(df, words):
-    regexes = [f".*{word}.*" for word in words]
-    return df[df['text'].str.contains(regexes, case=False)]
+    subset_dfs = []
+    for word in words:
+        regex = rf"\b{word}\b"
+        subset_df = df[df['text'].str.contains(regex, case=False)]
+        subset_df['word'] = word
+        subset_dfs.append(subset_df)
 
-def main():
+    return pd.concat(subset_dfs)
+
+def load_df():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
     comment_dir_path = os.path.join(data_dir_path, 'comments')
@@ -50,9 +56,24 @@ def main():
         ))
 
     comment_df = pd.DataFrame(comments_data, columns=['createtime', 'author', 'text', 'video_id'])
+    comment_df = comment_df[comment_df['text'].notna()]
     comment_df['text'] = comment_df['text'].str.replace(r'\n',  ' ', regex=True)
+    return comment_df
 
-    word_method = 'countries'
+def main():
+    this_dir_path = os.path.dirname(os.path.abspath(__file__))
+    data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
+    df_cache_path = os.path.join(data_dir_path, 'cache', 'all_comments.csv')
+
+    if os.path.exists(df_cache_path):
+        comment_df = pd.read_csv(df_cache_path)
+        comment_df = comment_df[comment_df['text'].notna()]
+        comment_df['createtime'] = pd.to_datetime(comment_df['createtime'])
+    else:
+        comment_df = load_df()
+        comment_df.to_csv(df_cache_path)
+
+    word_method = 'leaders'
     time_span = 'broad'
 
     if word_method == 'countries':
@@ -60,8 +81,11 @@ def main():
         comment_df = where_contains_words(comment_df, countries)
 
     elif word_method == 'leaders':
-        leaders = ['putin', 'zelensky', 'boris', 'biden', 'trump', 'macron', 'scholz']
+        leaders = ['putin', 'zelensky', 'zelenskyy', 'zelenskiy', 'boris', 'biden', 'trump', 'macron', 'scholz', 'merkel']
         comment_df = where_contains_words(comment_df, leaders)
+
+    elif word_method == 'devisice':
+        words = []
 
 
     if time_span == 'broad':
@@ -79,7 +103,7 @@ def main():
         .reset_index() \
         .sort_values('createtime')
 
-    df = comment_df[['language', 'createtime', 'text']].groupby(['language', pd.Grouper(key='createtime', freq=freq)]) \
+    df = comment_df[['word', 'createtime', 'text']].groupby(['word', pd.Grouper(key='createtime', freq=freq)]) \
        .count() \
        .reset_index() \
        .sort_values('createtime')
@@ -91,14 +115,14 @@ def main():
     df = df[df['createtime'] < end_date]
 
     all_count_df = all_count_df.set_index('createtime')
-    df = df.pivot_table(index=['createtime'], columns=['language'], fill_value=0).droplevel(0, axis=1)
+    df = df.pivot_table(index=['createtime'], columns=['word'], fill_value=0).droplevel(0, axis=1)
 
     # TODO divide by all counts
     df = df.join(all_count_df)
 
-    language_columns = list(df.columns)
-    language_columns.remove('comment_count')
-    df = df[language_columns].div(df['comment_count'], axis=0)
+    word_columns = list(df.columns)
+    word_columns.remove('comment_count')
+    df = df[word_columns].div(df['comment_count'], axis=0)
 
     ax = df.plot()
     ax.legend(loc='right')

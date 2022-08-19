@@ -23,7 +23,7 @@ def main():
     comment_dir_path = os.path.join(data_dir_path, 'comments')
 
     comments = []
-    for file_name in tqdm.tqdm(os.listdir(comment_dir_path)):
+    for file_name in tqdm.tqdm(os.listdir(comment_dir_path)[:10000]):
         file_path = os.path.join(comment_dir_path, file_name, 'video_comments.json')
 
         if not os.path.exists(file_path):
