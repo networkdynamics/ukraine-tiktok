@@ -84,9 +84,6 @@ def main():
         leaders = ['putin', 'zelensky', 'zelenskyy', 'zelenskiy', 'boris', 'biden', 'trump', 'macron', 'scholz', 'merkel']
         comment_df = where_contains_words(comment_df, leaders)
 
-    elif word_method == 'devisice':
-        words = []
-
 
     if time_span == 'broad':
         start_date = datetime(2022, 1, 1)

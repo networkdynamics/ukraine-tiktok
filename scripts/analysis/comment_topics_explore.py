@@ -2,6 +2,7 @@ from datetime import datetime
 import json
 import os
 import random
+import re
 from typing import final
 
 from octis.dataset.dataset import Dataset
@@ -16,6 +17,7 @@ from nltk.stem.wordnet import WordNetLemmatizer
 import numpy as np
 import pandas as pd
 import tqdm
+from umap import UMAP
 
 MEANINGS = {
     'володимирзеленський': "Ukrainian for 'Volodymr Zelensky'",
@@ -265,57 +267,87 @@ def main():
 
     # Train the model on the corpus.
     #for num_topics in [4, 6, 8, 10, 12, 14, 16]:
-    num_topics = 6
+    #num_topics = 6
     topic_model = 'cetopic'
     seed = 42
     dim_size = -1
     word_select_method = 'tfidf_idfi'
     pretrained_model = 'cardiffnlp/twitter-roberta-base'
 
-    if topic_model == 'cetopic':
-        tm = CETopicTM(dataset=dataset, 
-                       topic_model=topic_model, 
-                       num_topics=num_topics, 
-                       dim_size=dim_size, 
-                       word_select_method=word_select_method,
-                       embedding=pretrained_model, 
-                       seed=seed)
-    elif topic_model == 'lda':
-        tm = LDATM(dataset, topic_model, num_topics)
+    for num_topics in [2, 3, 4, 5, 6, 7, 8]:
+        if topic_model == 'cetopic':
+            tm = CETopicTM(dataset=dataset, 
+                        topic_model=topic_model, 
+                        num_topics=num_topics, 
+                        dim_size=dim_size, 
+                        word_select_method=word_select_method,
+                        embedding=pretrained_model, 
+                        seed=seed)
+        elif topic_model == 'lda':
+            tm = LDATM(dataset, topic_model, num_topics)
 
-    tm.train(embeddings=embeddings)
+        tm.train(embeddings=embeddings)
 
-    td_score, cv_score, npmi_score = tm.evaluate()
-    print(f'Model {topic_model} num_topics: {num_topics} td: {td_score} npmi: {npmi_score} cv: {cv_score}')
-    
-    topics = tm.get_topics()
+        td_score, cv_score, npmi_score = tm.evaluate()
+        print(f'Model {topic_model} num_topics: {num_topics} td: {td_score} npmi: {npmi_score} cv: {cv_score}')
+        
+        # check words in same cluster
+        # check all comments with ura, uraa are in same cluster
+        # check comments with nato and china in same cluster
+        regexes = {
+            'china': r"\bchina\b",
+            'nato': r"\bnato\b",
+            'ura': r"\bura+\b",
+        }
+        word_topic_counts = {word: {topic_id: 0 for topic_id in range(num_topics)} for word in regexes}
+        for idx, (doc, topic) in enumerate(zip(eng_raw_docs, tm.topics)):
+            for word, regex in regexes.items():
+                if re.search(regex, doc):
+                    word_topic_counts[word][topic] += 1
 
-    sample_method = 'random'
+        num = 0
+        denom = 0
+        for word, topic_counts in word_topic_counts.items():
+            word_dist = max(topic_counts.values()) / sum(topic_counts.values())
+            num *= word_dist
+            denom += word_dist
+        score = len(word_topic_counts) * num / denom
+        print(f"Our contextual score: {score}")
 
-    distances = tm.distances
-    for topic_num in topics:
-        print(f"Topic number: {topic_num}")
-        print(topics[topic_num])
-        num_sample = 10
-        if sample_method == 'random':
-            comment_idx = random.sample([idx for (idx, topic) in enumerate(tm.topics) if topic == topic_num], num_sample)
-        elif sample_method == 'closest':
-            comment_idx = np.argsort(distances[:, topic_num])[:num_sample]
-        for idx in comment_idx:
-            print(eng_raw_docs[idx])
+        topics = tm.get_topics()
 
-    fig = plt.figure()
-    ax = fig.add_subplot(projection='3d')
+        sample_method = 'random'
 
-    topic_markers = ['o', '*', '^', 's', '+', 'D']
-    for topic_num in topics:
-        topic_indices = [idx for (idx, topic) in enumerate(tm.topics) if topic == topic_num]
-        topic_embeddings = embeddings[topic_indices]
-        marker = topic_markers[topic_num]
-        ax.scatter(topic_embeddings[:,0], topic_embeddings[:,1], topic_embeddings[:,2], marker=marker)
+        distances = tm.distances
+        for topic_num in topics:
+            print(f"Topic number: {topic_num}")
+            print(topics[topic_num])
+            num_sample = 3
+            if sample_method == 'random':
+                comment_idx = random.sample([idx for (idx, topic) in enumerate(tm.topics) if topic == topic_num], num_sample)
+            elif sample_method == 'closest':
+                comment_idx = np.argsort(distances[:, topic_num])[:num_sample]
+            for idx in comment_idx:
+                print(eng_raw_docs[idx])
 
-    fig_path = os.path.join(data_dir_path, '..', 'figs', 'clusters.png')
-    plt.savefig(fig_path)
+        dim_size = 2
+        umap = UMAP(n_neighbors=15, n_components=dim_size, min_dist=0.0, metric='cosine', random_state=seed)
+        umap.fit(embeddings)
+        reduced_embeddings = umap.transform(embeddings)
+        reduced_embeddings = np.nan_to_num(reduced_embeddings)
+
+        fig = plt.figure()
+        ax = fig.add_subplot()
+
+        topic_markers = ['o', '*', '^', 's', '+', 'D']
+        for topic_num in topics:
+            topic_indices = [idx for (idx, topic) in enumerate(tm.topics) if topic == topic_num]
+            topic_embeddings = reduced_embeddings[topic_indices]
+            marker = topic_markers[topic_num]
+            ax.scatter(topic_embeddings[:,0], topic_embeddings[:,1], marker=marker)
+
+        fig_path = os.path.join(data_dir_path, '..', 'figs', f'clusters_{num_topics}.png')
+        plt.savefig(fig_path)
 
 
 if __name__ == '__main__':

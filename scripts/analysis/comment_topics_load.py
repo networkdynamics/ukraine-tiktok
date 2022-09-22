@@ -270,7 +270,7 @@ def main():
     num_topics = 5
     topic_model = 'cetopic'
     seed = 42
-    dim_size = 3
+    dim_size = -1
     word_select_method = 'tfidf_idfi'
     pretrained_model = 'cardiffnlp/twitter-roberta-base'
 

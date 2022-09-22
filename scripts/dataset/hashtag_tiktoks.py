@@ -9,7 +9,8 @@ def main():
     #hashtags = ['standwithukraine', 'russia', 'nato', 'putin', 'moscow', 'zelenskyy', 'stopwar', 'stopthewar', 'ukrainewar', 'ww3']
     #hashtags = ['володимирзеленський', 'славаукраїні', 'путінхуйло🔴⚫🇺🇦', 'россия', 
     #'війнавукраїні', 'зеленський', 'нівійні', 'війна', 'нетвойне', 'зеленский', 'путинхуйло']
-    hashtags = ['denazification', 'specialmilitaryoperation', 'africansinukraine', 'putinspeech', 'whatshappeninginukraine']
+    hashtags = ['denazification', 'specialmilitaryoperation', 'africansinukraine', 'putinspeech', 'whatshappeninginukraine', 'greenscreen']
+    hashtags = ['fyp', 'foryou', 'fypシ', 'viral', 'foryoupage', 'fy', 'edit', 'capcut', 'tiktok', '2022', 'trending', 'funny']
     
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     data_dir_path = os.path.join(this_dir_path, '..', '..', 'data', 'hashtags')
