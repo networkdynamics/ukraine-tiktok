@@ -62,7 +62,7 @@ def main():
                     all_replies_fetched = True
                     for comment in comments:
                         num_already_fetched = len(comment.get('reply_comment', []) if comment.get('reply_comment', []) is not None else [])
-                        num_comments_to_fetch = comment['reply_comment_total'] - num_already_fetched
+                        num_comments_to_fetch = comment.get('reply_comment_total', 0) - num_already_fetched
                         if num_comments_to_fetch > 0:
                             all_replies_fetched = False
 
