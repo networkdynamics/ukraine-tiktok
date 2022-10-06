@@ -27,12 +27,6 @@ def main():
 
         videos += video_data
 
-    videos = [{
-        'id': '7120221075807587630',
-        'author': {
-            'uniqueId': 'ed_toks1'
-        }
-    }]
 
     comments_dir_path = os.path.join(data_dir_path, "comments")
     if not os.path.exists(comments_dir_path):
@@ -61,8 +55,19 @@ def main():
             if os.path.exists(comment_file_path):
                 with open(comment_file_path, 'r') as f:
                     comments = json.load(f)
-                if len(comments) > 0 and isinstance(comments[0]['user'], dict):
-                    continue
+                if len(comments) > 0:
+                    if isinstance(comments[0]['user'], dict):
+                        continue
+
+                    all_replies_fetched = True
+                    for comment in comments:
+                        num_already_fetched = len(comment.get('reply_comment', []) if comment.get('reply_comment', []) is not None else [])
+                        num_comments_to_fetch = comment['reply_comment_total'] - num_already_fetched
+                        if num_comments_to_fetch > 0:
+                            all_replies_fetched = False
+
+                    if all_replies_fetched:
+                        continue
 
             try:
                 comments = []
