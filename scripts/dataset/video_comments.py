@@ -34,13 +34,15 @@ def main():
 
     blacklist_hashtags = ['derealization']
 
+    chrome_version = int(os.environ['CHROME_VERSION'])
+
     delay = 0
     finished = False
 
     while not finished:
         random.shuffle(videos)
         try:
-            with TikTokApi(chrome_version=106, request_delay=delay, headless=True) as api:
+            with TikTokApi(chrome_version=chrome_version, request_delay=delay, headless=True) as api:
                 for video in tqdm.tqdm(videos):
 
                     hashtags = [challenge['title'] for challenge in video.get('challenges', [])]
