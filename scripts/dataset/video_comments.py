@@ -40,7 +40,7 @@ def main():
     while not finished:
         random.shuffle(videos)
         try:
-            with TikTokApi(request_delay=delay, headless=True) as api:
+            with TikTokApi(chrome_version=106, request_delay=delay, headless=True) as api:
                 for video in tqdm.tqdm(videos):
 
                     hashtags = [challenge['title'] for challenge in video.get('challenges', [])]
@@ -56,8 +56,7 @@ def main():
                         with open(comment_file_path, 'r') as f:
                             comments = json.load(f)
                         if len(comments) > 0:
-                            if isinstance(comments[0]['user'], dict):
-                                continue
+                            all_comments_users = all(isinstance(comment['user'], dict) for comment in comments)
 
                             all_replies_fetched = True
                             for comment in comments:
@@ -66,7 +65,7 @@ def main():
                                 if num_comments_to_fetch > 0:
                                     all_replies_fetched = False
 
-                            if all_replies_fetched:
+                            if all_replies_fetched and all_comments_users:
                                 continue
 
                     try:
