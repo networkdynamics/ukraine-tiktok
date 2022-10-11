@@ -27,12 +27,6 @@ def main():
 
         videos += video_data
 
-    videos = [{
-        'id': '7120221075807587630',
-        'author': {
-            'uniqueId': 'ed_toks1'
-        }
-    }]
 
     comments_dir_path = os.path.join(data_dir_path, "comments")
     if not os.path.exists(comments_dir_path):
@@ -40,44 +34,56 @@ def main():
 
     blacklist_hashtags = ['derealization']
 
+    chrome_version = int(os.environ['CHROME_VERSION'])
+
     delay = 0
     finished = False
 
-    #while not finished:
-    #    random.shuffle(videos)
-    #    try:
-    with TikTokApi(request_delay=delay, headless=True) as api:
-        for video in tqdm.tqdm(videos):
+    while not finished:
+        random.shuffle(videos)
+        try:
+            with TikTokApi(chrome_version=chrome_version, request_delay=delay, headless=True) as api:
+                for video in tqdm.tqdm(videos):
 
-            hashtags = [challenge['title'] for challenge in video.get('challenges', [])]
-            if any(blacklist_hashtag in hashtags for blacklist_hashtag in blacklist_hashtags):
-                continue
+                    hashtags = [challenge['title'] for challenge in video.get('challenges', [])]
+                    if any(blacklist_hashtag in hashtags for blacklist_hashtag in blacklist_hashtags):
+                        continue
 
-            comment_dir_path = os.path.join(comments_dir_path, video['id'])
-            if not os.path.exists(comment_dir_path):
-                os.mkdir(comment_dir_path)
+                    comment_dir_path = os.path.join(comments_dir_path, video['id'])
+                    if not os.path.exists(comment_dir_path):
+                        os.mkdir(comment_dir_path)
 
-            comment_file_path = os.path.join(comment_dir_path, f"video_comments.json")
-            if os.path.exists(comment_file_path):
-                with open(comment_file_path, 'r') as f:
-                    comments = json.load(f)
-                if len(comments) > 0 and isinstance(comments[0]['user'], dict):
-                    continue
+                    comment_file_path = os.path.join(comment_dir_path, f"video_comments.json")
+                    if os.path.exists(comment_file_path):
+                        with open(comment_file_path, 'r') as f:
+                            comments = json.load(f)
+                        if len(comments) > 0:
+                            all_comments_users = all(isinstance(comment['user'], dict) for comment in comments)
 
-            try:
-                comments = []
-                for comment in api.video(id=video['id'], username=video['author']['uniqueId']).comments(count=1000):
-                    comments.append(comment)
+                            all_replies_fetched = True
+                            for comment in comments:
+                                num_already_fetched = len(comment.get('reply_comment', []) if comment.get('reply_comment', []) is not None else [])
+                                num_comments_to_fetch = comment.get('reply_comment_total', 0) - num_already_fetched
+                                if num_comments_to_fetch > 0:
+                                    all_replies_fetched = False
 
-                with open(comment_file_path, 'w') as f:
-                    json.dump(comments, f)
-            except exceptions.NotAvailableException:
-                continue
+                            if all_replies_fetched and all_comments_users:
+                                continue
+
+                    try:
+                        comments = []
+                        for comment in api.video(id=video['id'], username=video['author']['uniqueId']).comments(count=1000):
+                            comments.append(comment)
+
+                        with open(comment_file_path, 'w') as f:
+                            json.dump(comments, f)
+                    except exceptions.NotAvailableException:
+                        continue
 
                 finished = True
 
-        #except Exception as e:
-        #    time.sleep(1800)
+        except Exception as e:
+            time.sleep(1800)
 
 
 if __name__ == '__main__':
