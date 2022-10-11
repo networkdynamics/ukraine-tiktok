@@ -1,11 +1,20 @@
 from datetime import datetime
-import json
 import os
 
 import matplotlib.pyplot as plt
 import pandas as pd
-import tqdm
 import ftlangdetect
+
+import utils
+
+LANGUAGES = {
+    'ru': 'Russian',
+    'uk': 'Ukrainian',
+    'en': 'English',
+    'de': 'German',
+    'fr': 'French',
+    'es': 'Spanish'
+}
 
 def get_language(text):
     try:
@@ -20,46 +29,12 @@ def get_language(text):
 def main():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
-    comment_dir_path = os.path.join(data_dir_path, 'comments')
+    
+    comment_df = utils.get_comment_df()
 
-    comments = []
-    for file_name in tqdm.tqdm(os.listdir(comment_dir_path)[:10000]):
-        file_path = os.path.join(comment_dir_path, file_name, 'video_comments.json')
-
-        if not os.path.exists(file_path):
-            continue
-
-        with open(file_path, 'r') as f:
-            comment_data = json.load(f)
-
-        comments += comment_data
-
-    comments_data = []
-    for comment in comments:
-        if isinstance(comment['user'], str):
-            author = comment['user']
-        elif isinstance(comment['user'], dict):
-            if 'unique_id' in comment['user']:
-                author = comment['user']['unique_id']
-            elif 'uniqueId' in comment['user']:
-                author = comment['user']['uniqueId']
-            else:
-                author = comment['user']['uid']
-        else:
-            raise Exception()
-
-        comments_data.append((
-            datetime.fromtimestamp(comment['create_time']), 
-            author, 
-            comment['text'],
-            comment['aweme_id']
-        ))
-
-    comment_df = pd.DataFrame(comments_data, columns=['createtime', 'author', 'text', 'video_id'])
-    comment_df['text'] = comment_df['text'].str.replace(r'\n',  ' ', regex=True)
     comment_df['language'] = comment_df['text'].apply(get_language)
 
-    language_method = 'ru_n_uk'
+    language_method = 'ukrainian'
     time_span = 'broad'
 
     if language_method == 'top':
@@ -126,12 +101,22 @@ def main():
     language_columns.remove('comment_count')
     df = df[language_columns].div(df['comment_count'], axis=0)
 
+    # have nice figure names
+    df = df.rename(columns=LANGUAGES)
+
     ax = df.plot()
+    ax.set_xlabel('Time')
+    ax.set_ylabel('Share')
     ax.legend(loc='right')
+    plt.tight_layout()
 
     fig_dir_path = os.path.join(data_dir_path, '..', 'figs')
-    fig_path = os.path.join(fig_dir_path, f'{language_method}_languages_over_time_{time_span}.png')
+    output_name = f'{language_method}_languages_over_time_{time_span}'
+    fig_path = os.path.join(fig_dir_path, f"{output_name}.png")
     plt.savefig(fig_path)
+
+    output_df_path = os.path.join(data_dir_path, 'outputs', f"{output_name}.csv")
+    df.to_csv(output_df_path)
 
 if __name__ == '__main__':
     main()

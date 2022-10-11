@@ -8,36 +8,21 @@ from matplotlib import pyplot as plt
 import pandas as pd
 import tqdm
 
+import utils
+
 def main():
 
     #file_hashtags = ['ukraine', 'standwithukraine', 'russia', 'nato', 'putin', 'moscow', 'zelenskyy', 'stopwar', 'stopthewar', 'ukrainewar', 'ww3' \
     #    'володимирзеленський', 'славаукраїні', 'путінхуйло🔴⚫🇺🇦', 'россия', 'війнавукраїні', 'зеленський', 'нівійні', 'війна', 'нетвойне', \
     #    'зеленский', 'путинхуйло', 'denazification', 'specialmilitaryoperation', 'africansinukraine', 'putinspeech', 'whatshappeninginukraine']
 
-    this_dir_path = os.path.dirname(os.path.abspath(__file__))
-    root_dir_path = os.path.join(this_dir_path, '..', '..')
-    data_dir_path = os.path.join(root_dir_path, 'data')
+    NUM_TOP_HASHTAGS = 5
 
-    hashtag_dir_path = os.path.join(data_dir_path, 'hashtags')
-    searches_dir_path = os.path.join(data_dir_path, 'searches')
-    file_paths = [os.path.join(hashtag_dir_path, file_name) for file_name in os.listdir(hashtag_dir_path)] \
-               + [os.path.join(searches_dir_path, file_name) for file_name in os.listdir(searches_dir_path)]
+    video_df = utils.get_video_df()
 
-    videos = []
-    for file_path in file_paths:
-        with open(file_path, 'r') as f:
-            video_data = json.load(f)
-
-        videos += video_data
-
-    vids_data = [(video['desc'], datetime.fromtimestamp(video['createTime']), [challenge['title'] for challenge in video.get('challenges', [])]) for video in videos]
-
-    NUM_TOP_HASHTAGS = 20
-
-    video_df = pd.DataFrame(vids_data, columns=['desc', 'createtime', 'hashtags'])
     hashtags_df = video_df.explode('hashtags')
 
-    filter_method = 'russiavsukraine'
+    filter_method = 'top'
     if filter_method == 'top':
         top_hashtags_df = hashtags_df.groupby('hashtags')['desc'].count().sort_values(ascending=False).head(NUM_TOP_HASHTAGS)
         top_hashtags = set(top_hashtags_df.index)
@@ -55,7 +40,7 @@ def main():
         .reset_index() \
         .sort_values('createtime')
 
-    df = filtered_hashtags_df.groupby(['hashtags', pd.Grouper(key='createtime', freq='W')]) \
+    df = filtered_hashtags_df[['hashtags', 'createtime', 'desc']].groupby(['hashtags', pd.Grouper(key='createtime', freq='W')]) \
        .count() \
        .reset_index() \
        .sort_values('createtime')
@@ -81,9 +66,16 @@ def main():
 
     df.plot()
 
+    this_dir_path = os.path.dirname(os.path.abspath(__file__))
+    root_dir_path = os.path.join(this_dir_path, '..', '..')
+    outputs_dir_path = os.path.join(root_dir_path, 'data', 'outputs')
     fig_dir_path = os.path.join(root_dir_path, 'figs')
-    fig_path = os.path.join(fig_dir_path, 'hashtags_over_time.png')
+
+    filename = f'{filter_method}_hashtags_over_time'
+    fig_path = os.path.join(fig_dir_path, f"{filename}.png")
     plt.savefig(fig_path)
+
+    df.to_csv(os.path.join(outputs_dir_path, f"{filename}.csv"))
 
 
 if __name__ == '__main__':
