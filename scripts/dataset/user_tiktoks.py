@@ -7,6 +7,7 @@ import time
 import tqdm
 
 from TikTokApi import TikTokApi
+from TikTokApi import exceptions
 
 def main():
 
@@ -23,7 +24,7 @@ def main():
         with open(file_path, 'r') as f:
             video_data = json.load(f)
 
-        hashtag_users = set([video['author']['uniqueId'] for video in video_data])
+        hashtag_users = set([(video['author']['uniqueId'],video['author']['id'],video['author']['secUid']) for video in video_data])
         users = users.union(hashtag_users)
 
     users_dir_path = os.path.join(data_dir_path, "users")
@@ -32,13 +33,13 @@ def main():
 
     users = list(users)
 
-    delay = 15
+    delay = 2
     finished = False
     while not finished:
         random.shuffle(users)
         try:
-            with TikTokApi(request_delay=delay, headless=True) as api:
-                for username in tqdm.tqdm(users):
+            with TikTokApi(request_delay=delay, headless=False, chrome_version=104) as api:
+                for username, user_id, sec_uid in tqdm.tqdm(users):
 
                     user_dir_path = os.path.join(users_dir_path, username)
                     if not os.path.exists(user_dir_path):
@@ -49,14 +50,19 @@ def main():
                         continue
 
                     user_videos = []
-                    for video in api.user(username=username).videos(count=10000):
-                        user_videos.append(video.info())
+                    try:
+                        for video in api.user(username=username, user_id=user_id, sec_uid=sec_uid).videos(count=10000):
+                            user_videos.append(video.info())
+                    except exceptions.NotAvailableException:
+                        continue
+                    except exceptions.CaptchaException:
+                        raise
 
                     with open(user_file_path, 'w') as f:
                         json.dump(user_videos, f)
 
                 finished = True
-        except Exception:
+        except exceptions.TimeoutException:
             time.sleep(3600)
 
 if __name__ == '__main__':
