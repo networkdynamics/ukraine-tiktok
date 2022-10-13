@@ -28,7 +28,7 @@ def get_comment_features(comment):
 
     return author_id, author_name, mentioned_users
 
-def load_df():
+def load_comment_df():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
     comment_dir_path = os.path.join(data_dir_path, 'comments')
@@ -102,7 +102,7 @@ def get_comment_df():
         comment_df['mentions'] = comment_df['mentions'].apply(str_to_list)
         comment_df['createtime'] = pd.to_datetime(comment_df['createtime'])
     else:
-        comment_df = load_df()
+        comment_df = load_comment_df()
         comment_df.to_csv(df_cache_path)
 
     return comment_df

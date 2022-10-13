@@ -19,9 +19,13 @@ def main():
 
     graph = nx.Graph(graph)
 
-    k = 10000
-    sampled_nodes = random.sample(graph.nodes, k)
-    sampled_graph = graph.subgraph(sampled_nodes)
+    k = 10
+    N = 2
+    core_nodes = set(random.sample(graph.nodes, k))
+    for _ in range(N):
+        core_nodes.update(set(neighbour for node in core_nodes for neighbour in graph[node]))
+
+    sampled_graph = graph.subgraph(core_nodes)
 
     for n, d in sampled_graph.nodes(data=True):
         d.clear()
@@ -29,7 +33,7 @@ def main():
     for u, v, d in sampled_graph.edges(data=True):
         d.clear()
 
-    nx.readwrite.write_gexf(sampled_graph, os.path.join(data_dir_path, 'raw_graphs', f'sample_{k}_homogeneous_graph_data.gexf'))
+    nx.readwrite.write_gexf(sampled_graph, os.path.join(data_dir_path, 'raw_graphs', f'sample_{k}_{N}_homogeneous_graph_data.gexf'))
 
 if __name__ == '__main__':
     main()

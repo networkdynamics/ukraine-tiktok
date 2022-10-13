@@ -22,13 +22,15 @@ def to_jsonable_dict(row):
 
     return d
 
-def add_edges_to_graph(df, u_id, v_id, edge_columns, graph):
+def add_edges_to_graph(df, u_id, v_id, edge_columns, edge_type, graph):
     time_cols = [edge_col for edge_col in edge_columns if 'createtime' in edge_col]
     if len(time_cols) == 1:
         time_col = time_cols[0]
         df['unix_createtime'] = df[time_col].map(pd.Timestamp.timestamp).astype(int)
         edge_columns.remove(time_col)
         edge_columns.append('unix_createtime')
+    df['type'] = edge_type
+    edge_columns.append('type')
     df['edge_data'] = df[edge_columns].apply(to_jsonable_dict, axis=1)
     edges_df = df[[u_id, v_id, 'edge_data']]
     edges = list(edges_df.itertuples(index=False, name=None))
@@ -41,15 +43,17 @@ def main():
     comment_df = utils.get_comment_df()
     video_df = utils.get_video_df()
 
-    sample = 0.02
+    sample = None
     if sample:
         comment_df = comment_df.sample(frac=sample)
         video_df = video_df.sample(frac=sample)
 
-    count_comments_df = comment_df[['author_id', 'author_name', 'createtime']].groupby(['author_id', 'author_name']).count().reset_index().rename(columns={'createtime': 'comment_count'})
+    count_comments_df = comment_df[['author_id', 'author_name', 'createtime', 'text', 'comment_language']].groupby(['author_id', 'author_name']).aggregate(list).reset_index()
+    count_comments_df['comment_count'] = count_comments_df['createtime'].str.len()
 
     video_df = video_df.drop_duplicates('video_id')
-    count_vids_df = video_df[['author_id', 'author_name', 'createtime']].groupby(['author_id', 'author_name']).count().reset_index().rename(columns={'createtime': 'video_count'})
+    count_vids_df = video_df[['author_id', 'author_name', 'createtime', 'desc', 'hashtags']].groupby(['author_id', 'author_name']).aggregate(list).reset_index()
+    count_vids_df['video_count'] = count_vids_df['createtime'].str.len()
 
     counts_df = count_vids_df.merge(count_comments_df, how='outer', on=['author_id', 'author_name']).fillna(0)
     counts_df[['video_count', 'comment_count']] = counts_df[['video_count', 'comment_count']].astype(int)
@@ -99,19 +103,19 @@ def main():
         graph.add_nodes_from(user_ids)
 
         # video comment replies
-        add_edges_to_graph(interactions_df, 'comment_author_id', 'video_author_id', ['comment_createtime', 'video_hashtags', 'comment_text'], graph)
+        add_edges_to_graph(interactions_df, 'comment_author_id', 'video_author_id', ['comment_createtime', 'video_hashtags', 'comment_text'], 'video_comment', graph)
 
         # comment mentions
-        add_edges_to_graph(mentions_df, 'author_id', 'mention_id', ['createtime', 'text'], graph)
+        add_edges_to_graph(mentions_df, 'author_id', 'mention_id', ['createtime', 'text'], 'comment_mention', graph)
 
         # video shares
-        add_edges_to_graph(shares_df, 'author_id', 'share_video_user_id', ['createtime'], graph)
+        add_edges_to_graph(shares_df, 'author_id', 'share_video_user_id', ['createtime'], 'video_share', graph)
 
         # video_desc_mentions
-        add_edges_to_graph(video_mentions_df, 'author_id', 'mention_id', ['createtime'], graph)
+        add_edges_to_graph(video_mentions_df, 'author_id', 'mention_id', ['createtime'], 'video_mention', graph)
 
         # comment replies
-        add_edges_to_graph(comment_replies_df, 'author_id_reply', 'author_id', ['createtime_reply'], graph)
+        add_edges_to_graph(comment_replies_df, 'author_id_reply', 'author_id', ['createtime_reply'], 'comment_reply', graph)
 
     elif graph_type == 'heterogeneous':
         graph = nx.Graph()

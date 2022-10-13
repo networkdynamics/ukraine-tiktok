@@ -10,15 +10,16 @@ from TikTokApi import TikTokApi
 
 def main():
 
-    hashtags = ['ukraine', 'standwithukraine', 'russia', 'nato', 'putin', 'moscow', 'zelenskyy', 'stopwar', 'stopthewar', 'ukrainewar', 'ww3']
-    
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
 
+    hashtag_dir_path = os.path.join(data_dir_path, 'hashtags')
+    searches_dir_path = os.path.join(data_dir_path, 'searches')
+    file_paths = [os.path.join(hashtag_dir_path, file_name) for file_name in os.listdir(hashtag_dir_path)] \
+               + [os.path.join(searches_dir_path, file_name) for file_name in os.listdir(searches_dir_path)]
+
     users = set()
-    for hashtag in hashtags:
-        print(f"Getting hashtag users: {hashtag}")
-        file_path = os.path.join(data_dir_path, 'hashtags', f"#{hashtag}_videos.json")
+    for file_path in file_paths:
         with open(file_path, 'r') as f:
             video_data = json.load(f)
 

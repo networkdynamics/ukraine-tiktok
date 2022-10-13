@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import tqdm
 
+import utils
 
 MEANINGS = {
     'володимирзеленський': "Ukrainian for 'Volodymr Zelensky'",
@@ -113,75 +114,34 @@ def check_for_repeating_tokens(tokens):
     return (num_tokens / num_distinct_tokens) > 4
 
 
-
-def process_comment(comment):
-    comment_user = comment['user']
-    if isinstance(comment_user, str):
-        author_id = comment_user
-        author_name = comment_user
-    elif isinstance(comment_user, dict):
-        if 'unique_id' in comment_user:
-            author_id = comment_user['uid']
-            author_name = comment_user['unique_id']
-        elif 'uniqueId' in comment_user:
-            author_id = comment_user['id']
-            author_name = comment_user['uniqueId']
-        else:
-            author_name = ''
-            author_id = comment_user['uid']
-    else:
-        raise Exception()
-
-    comment_text = comment['text']
-    return (
-        comment['cid'],
-        datetime.fromtimestamp(comment['create_time']), 
-        author_name,
-        author_id, 
-        comment_text,
-        comment['aweme_id']
-    )
-
-def load_comments_df():
-    this_dir_path = os.path.dirname(os.path.abspath(__file__))
-    data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
-
-    comment_dir_path = os.path.join(data_dir_path, 'comments')
-
-    comments_data = []
-    for file_name in tqdm.tqdm(os.listdir(comment_dir_path)):
-        file_path = os.path.join(comment_dir_path, file_name, 'video_comments.json')
-
-        if not os.path.exists(file_path):
-            continue
-
-        with open(file_path, 'r') as f:
-            comments = json.load(f)
-
-        comments_data += [process_comment(comment) for comment in comments]
-            
-    comment_df = pd.DataFrame(comments_data, columns=['comment_id', 'createtime', 'author_name', 'author_id', 'text', 'video_id'])
+def load_comments_df(limit=500000):
+    
+    comment_df = utils.get_comment_df()
 
     comment_df = comment_df[comment_df['text'].notna()]
     comment_df = comment_df[comment_df['text'] != '']
     comment_df = comment_df[comment_df['text'] != 'Nan']
+    comment_df = comment_df[comment_df['text'] != 'Null']
 
-    comment_df['text_no_newlines'] = comment_df['text'].str.replace(r'\n',  ' ', regex=True)
     regex_whitespace = '^[\s ︎]+$' # evil weird whitespace character
-    comment_df = comment_df[~comment_df['text_no_newlines'].str.fullmatch(regex_whitespace)]
+    comment_df = comment_df[~comment_df['text'].str.fullmatch(regex_whitespace)]
 
     # get only english comments
-    comment_df['english'] = comment_df['text_no_newlines'].apply(check_english)
+    comment_df['english'] = comment_df['text'].apply(check_english)
     english_comments_df = comment_df[comment_df['english']]
 
     # tokenize
-    english_comments_df['text_processed'] = english_comments_df['text_no_newlines'].apply(preprocess)
+    english_comments_df['text_processed'] = english_comments_df['text'].apply(preprocess)
 
     english_comments_df = english_comments_df[english_comments_df['text_processed'].notna()]
     english_comments_df = english_comments_df[english_comments_df['text_processed'] != '']
+    english_comments_df = english_comments_df[english_comments_df['text_processed'] != 'Nan']
 
     # use first 1 mil
-    return english_comments_df.iloc[:500000]
+    if limit:
+        english_comments_df = english_comments_df.iloc[:limit]
+
+    return english_comments_df
 
 
 def main():
@@ -195,7 +155,7 @@ def main():
 
     final_comments_df = pd.read_csv(df_path)
 
-    eng_raw_docs = list(final_comments_df['text_no_newlines'].values)
+    eng_raw_docs = list(final_comments_df['text'].values)
     docs = list(final_comments_df['text_processed'].values)
     timestamps = list(final_comments_df['createtime'].values)
 
