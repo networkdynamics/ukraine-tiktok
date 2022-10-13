@@ -31,6 +31,8 @@ def main():
     if not os.path.exists(users_dir_path):
         os.mkdir(users_dir_path)
 
+    chrome_version = os.environ['CHROME_VERSION']
+
     users = list(users)
 
     delay = 2
@@ -38,7 +40,7 @@ def main():
     while not finished:
         random.shuffle(users)
         try:
-            with TikTokApi(request_delay=delay, headless=False, chrome_version=104) as api:
+            with TikTokApi(request_delay=delay, headless=False, chrome_version=chrome_version) as api:
                 for username, user_id, sec_uid in tqdm.tqdm(users):
 
                     user_dir_path = os.path.join(users_dir_path, username)
