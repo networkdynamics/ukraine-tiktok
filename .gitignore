@@ -1,6 +1,8 @@
 .vscode
 data
 openhgnn
+scripts/analysis/topicx
+figs
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

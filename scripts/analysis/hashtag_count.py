@@ -6,7 +6,6 @@ import re
 
 import regex
 import tqdm
-from translate import Translator
 
 meanings = {
     'володимирзеленський': "Ukrainian for 'Volodymr Zelensky'",
@@ -84,24 +83,24 @@ def main():
     #hashtags = ['ukraine', 'standwithukraine', 'russia', 'nato', 'putin', 'moscow', 'zelenskyy', 'stopwar', 'stopthewar', 'ukrainewar', 'ww3']
     #hashtags = ['володимирзеленський', 'славаукраїні', 'путінхуйло🔴⚫🇺🇦', 'россия', 
     #'війнавукраїні', 'зеленський', 'нівійні', 'війна', 'нетвойне', 'зеленский', 'путинхуйло']
-    hashtags = ['denazification', 'specialmilitaryoperation', 'africansinukraine', 'putinspeech', 'whatshappeninginukraine']
+    #hashtags = ['denazification', 'specialmilitaryoperation', 'africansinukraine', 'putinspeech', 'whatshappeninginukraine']
 
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
+    
+    hashtag_dir_path = os.path.join(data_dir_path, 'hashtags')
+    searches_dir_path = os.path.join(data_dir_path, 'searches')
+    file_paths = [os.path.join(hashtag_dir_path, file_name) for file_name in os.listdir(hashtag_dir_path)] \
+               + [os.path.join(searches_dir_path, file_name) for file_name in os.listdir(searches_dir_path)]
 
     videos = []
-    for hashtag in hashtags:
-        print(f"Getting hashtag users: {hashtag}")
-        file_path = os.path.join(data_dir_path, f"#{hashtag}_videos.json")
+    for file_path in file_paths:
         with open(file_path, 'r') as f:
             video_data = json.load(f)
 
         videos += video_data
 
-    descriptions = [video['desc'] for video in videos]
-
-    hashtag_regex = '#[^ #,]+'
-    all_desc_hashtags = [re.findall(hashtag_regex, desc) for desc in descriptions]
+    all_desc_hashtags = [[challenge['title'] for challenge in video.get('challenges', [])] for video in videos]
     hashtags = [hashtag for desc_hashtag in all_desc_hashtags for hashtag in desc_hashtag]
 
     cnt = collections.Counter(hashtags)
@@ -114,7 +113,7 @@ def main():
     translated_hashtags = []
     for hashtag_count in tqdm.tqdm(common_hashtags):
         hashtag, count = hashtag_count
-        word = hashtag[1:]
+        word = hashtag
         meaning = ''
 
         if word in meanings:
@@ -131,8 +130,8 @@ def main():
         })
 
     this_file_dir = os.path.dirname(os.path.abspath(__file__))
-    data_dir = os.path.join(this_file_dir, '..', '..', 'data')
-    hashtag_file = os.path.join(data_dir, 'alternative_common_hashtags.json')
+    data_dir = os.path.join(this_file_dir, '..', '..', 'data', 'outputs')
+    hashtag_file = os.path.join(data_dir, 'all_common_hashtags.json')
 
     with open(hashtag_file, 'w') as f:
         json.dump(translated_hashtags, f, indent=4, ensure_ascii=False)

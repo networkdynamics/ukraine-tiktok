@@ -2,11 +2,11 @@ from datetime import datetime
 import json
 import os
 
-import networkx as nx
 import pandas as pd
 import tqdm
 import numpy as np
 import scipy.sparse as sp
+from nltk.corpus import stopwords
 
 from sklearn.preprocessing import normalize
 from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
@@ -105,8 +105,18 @@ def main():
     top_hashtags = set(top_hashtags_df.index)
     docs_per_class = hashtags_df[hashtags_df['hashtags'].isin(top_hashtags)].groupby('hashtags')[['desc']].agg(' '.join)
 
+    # get stopwords
+    languages = ['english', 'russian', 'french', 'spanish', 'german']
+    all_stopwords = []
+    for language in languages:
+        all_stopwords.extend(stopwords.words(language))
+    ukraine_stopwords_path = os.path.join(data_dir_path, 'stopwords', 'stopwords_ua.txt')
+    with open(ukraine_stopwords_path, 'r') as f:
+        ukraine_stopwords = f.readlines()
+    all_stopwords.extend(ukraine_stopwords)
+
     # Create c-TF-IDF
-    count_vectorizer = CountVectorizer().fit(docs_per_class['desc'])
+    count_vectorizer = CountVectorizer(stop_words=all_stopwords).fit(docs_per_class['desc'])
     count = count_vectorizer.transform(docs_per_class['desc'])
     words = count_vectorizer.get_feature_names()
 
@@ -116,6 +126,9 @@ def main():
                     for idx, label in enumerate(docs_per_class.index.to_list())}
 
     print(json.dumps(words_per_class, indent=4, ensure_ascii=False))
+    data_out_path = os.path.join(data_dir_path, 'outputs', 'tfidf_desc_words.json')
+    with open(data_out_path, 'w') as f:
+        json.dump(words_per_class, f, indent=4, ensure_ascii=False)
 
     video_comments_df = video_df.rename(columns={'createtime': 'video_createtime', 'id': 'video_id', 'author': 'video_author', 'desc': 'video_desc', 'hashtags': 'video_hashtags'}) \
         .merge(comment_df.rename(columns={'createtime': 'comment_createtime', 'author': 'comment_author', 'text': 'comment_text'}), on='video_id')
@@ -128,7 +141,7 @@ def main():
     comments_per_hashtag_df = hashtag_comments_df[hashtag_comments_df['video_hashtags'].isin(top_hashtags)].groupby('video_hashtags')[['comment_text']].agg(' '.join)
 
     # Create c-TF-IDF
-    count_vectorizer = CountVectorizer().fit(comments_per_hashtag_df['comment_text'])
+    count_vectorizer = CountVectorizer(stop_words=all_stopwords).fit(comments_per_hashtag_df['comment_text'])
     count = count_vectorizer.transform(comments_per_hashtag_df['comment_text'])
     words = count_vectorizer.get_feature_names()
 
@@ -138,6 +151,9 @@ def main():
                     for idx, label in enumerate(comments_per_hashtag_df.index.to_list())}
 
     print(json.dumps(words_per_class, indent=4, ensure_ascii=False))
+    data_out_path = os.path.join(data_dir_path, 'outputs', 'tfidf_comment_words.json')
+    with open(data_out_path, 'w') as f:
+        json.dump(words_per_class, f, indent=4, ensure_ascii=False)
 
 
 if __name__ == '__main__':

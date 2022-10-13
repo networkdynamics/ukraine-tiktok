@@ -3,16 +3,15 @@ import json
 import os
 import re
 
-from octis.dataset.dataset import Dataset
-from topicx.baselines.cetopictm import CETopicTM
-from topicx.baselines.lda import LDATM
-import gensim
-from gensim.models.phrases import Phrases, ENGLISH_CONNECTOR_WORDS
+from bertopic import BERTopic
+from bertopic.backend._utils import select_backend
 import ftlangdetect
-from nltk.corpus import stopwords
-from nltk.stem.wordnet import WordNetLemmatizer
+import gensim
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import tqdm
+
 
 MEANINGS = {
     'володимирзеленський': "Ukrainian for 'Volodymr Zelensky'",
@@ -90,6 +89,14 @@ MEANINGS = {
     'CapCut': "Video Editor",
 }
 
+def preprocess(raw_text):
+    text = gensim.utils.to_unicode(raw_text, 'utf8', errors='ignore')
+    text = text.lower()
+    text = gensim.utils.deaccent(text)
+    text = re.sub('@[^ ]+', '@user', text)
+    text = re.sub('http[^ ]+', 'http', text)
+    return text
+
 def check_english(text):
     try:
         result = ftlangdetect.detect(text)
@@ -105,47 +112,7 @@ def check_for_repeating_tokens(tokens):
     num_distinct_tokens = len(set(tokens))
     return (num_tokens / num_distinct_tokens) > 4
 
-class NGrams:
-    def __init__(self, docs):
-        self.bigram = Phrases(docs, connector_words=ENGLISH_CONNECTOR_WORDS)
 
-    def add_ngrams(self, tokens):
-        # Token is a bigram, add to document
-        bigrams = [token for token in self.bigram[tokens] if '_' in token]
-        tokens.extend(bigrams)
-        return tokens
-
-class Lemmatizer:
-    def __init__(self):
-        self.lemmatizer = WordNetLemmatizer()
-
-    def lemmatize(self, tokens):
-        return [self.lemmatizer.lemmatize(token) for token in tokens]
-
-class StopwordRemover:
-    def __init__(self):
-        this_dir_path = os.path.dirname(os.path.abspath(__file__))
-        data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
-        languages = ['english', 'russian', 'french', 'spanish', 'german']
-        self.all_stopwords = set()
-        for language in languages:
-            self.all_stopwords.update(stopwords.words(language))
-        ukraine_stopwords_path = os.path.join(data_dir_path, 'stopwords', 'stopwords_ua.txt')
-        with open(ukraine_stopwords_path, 'r') as f:
-            ukraine_stopwords = f.readlines()
-        self.all_stopwords.update(ukraine_stopwords)
-
-    def remove_stopwords(self, tokens):
-        return [token for token in tokens if token not in self.all_stopwords]
-
-class LDATopTopic:
-    def __init__(self, lda):
-        self.lda = lda
-
-    def get_top_topic(self, raw_doc, tokens, bow):
-        topics = self.lda.get_document_topics(bow)
-        top_topic = max(topics, key = lambda topic: topic[1])
-        return (raw_doc, tokens, top_topic[0], top_topic[1])
 
 def process_comment(comment):
     comment_user = comment['user']
@@ -175,9 +142,10 @@ def process_comment(comment):
         comment['aweme_id']
     )
 
-def main():
+def load_comments_df():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
+
     comment_dir_path = os.path.join(data_dir_path, 'comments')
 
     comments_data = []
@@ -192,8 +160,11 @@ def main():
 
         comments_data += [process_comment(comment) for comment in comments]
             
-
     comment_df = pd.DataFrame(comments_data, columns=['comment_id', 'createtime', 'author_name', 'author_id', 'text', 'video_id'])
+
+    comment_df = comment_df[comment_df['text'].notna()]
+    comment_df = comment_df[comment_df['text'] != '']
+    comment_df = comment_df[comment_df['text'] != 'Nan']
 
     comment_df['text_no_newlines'] = comment_df['text'].str.replace(r'\n',  ' ', regex=True)
     regex_whitespace = '^[\s ︎]+$' # evil weird whitespace character
@@ -202,36 +173,83 @@ def main():
     # get only english comments
     comment_df['english'] = comment_df['text_no_newlines'].apply(check_english)
     english_comments_df = comment_df[comment_df['english']]
-    corpus = [doc.split() for doc in english_comments_df['text_no_newlines']]
 
-    dataset = Dataset(corpus)
+    # tokenize
+    english_comments_df['text_processed'] = english_comments_df['text_no_newlines'].apply(preprocess)
+
+    english_comments_df = english_comments_df[english_comments_df['text_processed'].notna()]
+    english_comments_df = english_comments_df[english_comments_df['text_processed'] != '']
+
+    # use first 1 mil
+    return english_comments_df.iloc[:500000]
+
+
+def main():
+    this_dir_path = os.path.dirname(os.path.abspath(__file__))
+    data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
+
+    df_path = os.path.join(data_dir_path, 'cache', 'half_mil_english_comments.csv')
+    if not os.path.exists(df_path):
+        final_comments_df = load_comments_df()
+        final_comments_df.to_csv(df_path)
+
+    final_comments_df = pd.read_csv(df_path)
+
+    eng_raw_docs = list(final_comments_df['text_no_newlines'].values)
+    docs = list(final_comments_df['text_processed'].values)
+    timestamps = list(final_comments_df['createtime'].values)
 
     # Train the model on the corpus.
-    #for num_topics in [4, 6, 8, 10, 12, 14, 16]:
-    num_topics = 6
-    topic_model = 'cetopic'
-    seed = 42
-    dim_size = -1
-    word_select_method = 'tfidf_idfi'
-    pretrained_model = 'bert-base-uncased'
+    pretrained_model = 'cardiffnlp/twitter-roberta-base'
 
-    if topic_model == 'cetopic':
-        tm = CETopicTM(dataset=dataset, 
-                       topic_model=topic_model, 
-                       num_topics=num_topics, 
-                       dim_size=dim_size, 
-                       word_select_method=word_select_method,
-                       embedding=pretrained_model, 
-                       seed=seed)
-    elif topic_model == 'lda':
-        tm = LDATM(dataset, topic_model, num_topics)
+    seed_topic_list = [
+        ['zelensky', 'slava', 'ukraine', 'hero'],
+        ['china', 'nato', 'biden', 'trump', 'macron', 'boris'],
+        ['ura', 'uraa', 'uraaa', 'uraaah', 'putin'],
+        ['hilarious', 'love', 'tiktok', 'haha']
+    ]
 
-    tm.train()
-    td_score, cv_score, npmi_score = tm.evaluate()
-    print(f'Model {topic_model} num_topics: {num_topics} td: {td_score} npmi: {npmi_score} cv: {cv_score}')
+    num_topics = 40
+    topic_model = BERTopic(seed_topic_list=None, embedding_model=pretrained_model, nr_topics=num_topics)
+
+    #model_path = os.path.join(data_dir_path, 'cache', 'model')
+
+    #if not os.path.exists(model_path):
+    # get embeddings so we can cache
+    embeddings_cache_path = os.path.join(data_dir_path, 'cache', 'english_comment_twitter_roberta_embeddings.npy')
+    if os.path.exists(embeddings_cache_path):
+        with open(embeddings_cache_path, 'rb') as f:
+            embeddings = np.load(f)
+    else:
+        topic_model.embedding_model = select_backend(pretrained_model,
+                                        language=topic_model.language)
+        embeddings = topic_model._extract_embeddings(docs,
+                                                    method="document",
+                                                    verbose=topic_model.verbose)
+
+        with open(embeddings_cache_path, 'wb') as f:
+            np.save(f, embeddings)
+
+    topics, probs = topic_model.fit_transform(docs, embeddings)
+
+    outputs_dir_path = os.path.join(data_dir_path, 'outputs')
+
+    topic_df = topic_model.get_topic_info()
+    topic_df.to_csv(os.path.join(outputs_dir_path, 'topics.csv'))
     
-    topics = tm.get_topics()
-    print(f'Topics: {topics}')
+    hierarchical_topics = topic_model.hierarchical_topics(docs)
+    tree = topic_model.get_topic_tree(hierarchical_topics)
+    with open(os.path.join(outputs_dir_path, f'{num_topics}_cluster_tree.txt'), 'w') as f:
+        f.write(tree)
+
+    topics_over_time = topic_model.topics_over_time(docs, timestamps, nr_bins=150)
+    topics_over_time.to_csv(os.path.join(outputs_dir_path, 'topics_over_time.csv'))
+
+    freq_df = topic_model.get_topic_freq()
+    freq_df.to_csv(os.path.join(outputs_dir_path, 'topic_freqs.csv'))
+
+    with open(os.path.join(outputs_dir_path, 'topic_labels.json'), 'w') as f:
+        json.dump(topic_model.topic_labels_, f)
 
 
 if __name__ == '__main__':
