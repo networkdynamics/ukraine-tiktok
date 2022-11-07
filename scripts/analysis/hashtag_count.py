@@ -1,5 +1,4 @@
 import collections
-from gc import collect
 import json
 import os
 import re

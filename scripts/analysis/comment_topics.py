@@ -148,7 +148,7 @@ def main():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
 
-    df_path = os.path.join(data_dir_path, 'cache', 'half_mil_english_comments.csv')
+    df_path = os.path.join(data_dir_path, 'cache', 'all_english_comments.csv')
     if not os.path.exists(df_path):
         final_comments_df = load_comments_df()
         final_comments_df.to_csv(df_path)
@@ -162,21 +162,14 @@ def main():
     # Train the model on the corpus.
     pretrained_model = 'cardiffnlp/twitter-roberta-base'
 
-    seed_topic_list = [
-        ['zelensky', 'slava', 'ukraine', 'hero'],
-        ['china', 'nato', 'biden', 'trump', 'macron', 'boris'],
-        ['ura', 'uraa', 'uraaa', 'uraaah', 'putin'],
-        ['hilarious', 'love', 'tiktok', 'haha']
-    ]
-
     num_topics = 40
-    topic_model = BERTopic(seed_topic_list=None, embedding_model=pretrained_model, nr_topics=num_topics)
+    topic_model = BERTopic(embedding_model=pretrained_model, nr_topics=num_topics)
 
     #model_path = os.path.join(data_dir_path, 'cache', 'model')
 
     #if not os.path.exists(model_path):
     # get embeddings so we can cache
-    embeddings_cache_path = os.path.join(data_dir_path, 'cache', 'english_comment_twitter_roberta_embeddings.npy')
+    embeddings_cache_path = os.path.join(data_dir_path, 'cache', 'all_english_comment_twitter_roberta_embeddings.npy')
     if os.path.exists(embeddings_cache_path):
         with open(embeddings_cache_path, 'rb') as f:
             embeddings = np.load(f)
@@ -190,25 +183,42 @@ def main():
         with open(embeddings_cache_path, 'wb') as f:
             np.save(f, embeddings)
 
-    topics, probs = topic_model.fit_transform(docs, embeddings)
+    train_size = 500000
+    train_docs = docs[:train_size]
+    train_embeds = embeddings[:train_size, :]
+    train_timestamps = timestamps[:train_size]
 
-    outputs_dir_path = os.path.join(data_dir_path, 'outputs')
+    _ = topic_model.fit_transform(train_docs, train_embeds)
+    topics, probs = topic_model.transform(docs, embeddings)
+
+    this_run_name = f'{num_topics}_twitter_roberta_base'
+    run_dir_path = os.path.join(data_dir_path, 'outputs', this_run_name)
+    if not os.path.exists(run_dir_path):
+        os.mkdir(run_dir_path)
+
+    with open(os.path.join(run_dir_path, 'topics.json'), 'w') as f:
+        json.dump([int(topic) for topic in topics], f)
+
+    with open(os.path.join(run_dir_path, 'probs.npy'), 'wb') as f:
+        np.save(f, probs)
 
     topic_df = topic_model.get_topic_info()
-    topic_df.to_csv(os.path.join(outputs_dir_path, 'topics.csv'))
+    topic_df.to_csv(os.path.join(run_dir_path, 'topic_info.csv'))
     
-    hierarchical_topics = topic_model.hierarchical_topics(docs)
+    hierarchical_topics = topic_model.hierarchical_topics(train_docs)
+    hierarchical_topics.to_csv(os.path.join(run_dir_path, 'hierarchical_topics.csv'))
+
     tree = topic_model.get_topic_tree(hierarchical_topics)
-    with open(os.path.join(outputs_dir_path, f'{num_topics}_cluster_tree.txt'), 'w') as f:
+    with open(os.path.join(run_dir_path, f'{num_topics}_cluster_tree.txt'), 'w') as f:
         f.write(tree)
 
-    topics_over_time = topic_model.topics_over_time(docs, timestamps, nr_bins=150)
-    topics_over_time.to_csv(os.path.join(outputs_dir_path, 'topics_over_time.csv'))
+    topics_over_time = topic_model.topics_over_time(train_docs, train_timestamps, nr_bins=150)
+    topics_over_time.to_csv(os.path.join(run_dir_path, 'topics_over_time.csv'))
 
     freq_df = topic_model.get_topic_freq()
-    freq_df.to_csv(os.path.join(outputs_dir_path, 'topic_freqs.csv'))
+    freq_df.to_csv(os.path.join(run_dir_path, 'topic_freqs.csv'))
 
-    with open(os.path.join(outputs_dir_path, 'topic_labels.json'), 'w') as f:
+    with open(os.path.join(run_dir_path, 'topic_labels.json'), 'w') as f:
         json.dump(topic_model.topic_labels_, f)
 
 

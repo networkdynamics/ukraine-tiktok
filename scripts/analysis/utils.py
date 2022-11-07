@@ -127,6 +127,7 @@ def get_video_df():
         video_df['createtime'] = pd.to_datetime(video_df['createtime'])
         video_df['mentions'] = video_df['mentions'].apply(str_to_list)
         video_df['hashtags'] = video_df['hashtags'].apply(str_to_list)
+        video_df['desc'] = video_df['desc'].fillna('')
         return video_df
 
     else:
@@ -214,5 +215,6 @@ def get_video_df():
             'share_video_id', 'share_video_user_id', 'share_video_user_name', 'share_type', 'mentions'
         ])
         video_df = video_df[video_df['desc'].notna()]
+        video_df = video_df.drop_duplicates('video_id')
         video_df.to_csv(video_df_path)
         return video_df

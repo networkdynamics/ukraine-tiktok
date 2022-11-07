@@ -7,7 +7,7 @@ import pandas as pd
 
 def main():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
-    root_dir_path = os.path.join(this_dir_path, '..', '..')
+    root_dir_path = os.path.join(this_dir_path, '..', '..', '..')
     outputs_dir_path = os.path.join(root_dir_path, 'data', 'outputs')
 
     topics = [7, 5, 47, 19, 90, 75, 95]

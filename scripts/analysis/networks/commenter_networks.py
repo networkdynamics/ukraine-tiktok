@@ -38,7 +38,7 @@ def add_edges_to_graph(df, u_id, v_id, edge_columns, edge_type, graph):
 
 def main():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
-    data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
+    data_dir_path = os.path.join(this_dir_path, '..', '..', '..', 'data')
 
     comment_df = utils.get_comment_df()
     video_df = utils.get_video_df()
