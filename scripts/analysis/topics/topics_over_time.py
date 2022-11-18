@@ -5,10 +5,17 @@ import os
 import matplotlib.pyplot as plt
 import pandas as pd
 
+def plot_events(ax, events):
+    for event in events:
+        ax.axvline(x=event[0])
+
+    for event in events:
+        ax.text(event[0], 0.01, event[1], rotation=45)
+
 def main():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     root_dir_path = os.path.join(this_dir_path, '..', '..', '..')
-    outputs_dir_path = os.path.join(root_dir_path, 'data', 'outputs')
+    outputs_dir_path = os.path.join(root_dir_path, 'data', 'outputs', '100_clusters')
 
     topics = [7, 5, 47, 19, 90, 75, 95]
     top_n_topics = 5
@@ -36,7 +43,7 @@ def main():
         selected_topics = sorted(freq_df['Topic'].to_list())
 
     # Prepare data
-    topic_names = {int(key): value[:40] + "..." if len(value) > 40 else value
+    topic_names = {int(key): value[value.index('_')+1:].replace('_', ', ')
                     for key, value in topic_labels.items()}
     topics_over_time["Name"] = topics_over_time['Topic'].map(topic_names)
     
@@ -50,6 +57,12 @@ def main():
 
     all_count = topics_over_time[['Timestamp', 'Frequency']].groupby('Timestamp').sum()
     data = data.div(all_count['Frequency'], axis=0)
+
+    events = [
+        (datetime(2022, 1, 17), 'Russia evacuates its Embassy in Kyiv'),
+        (datetime(2022, 2, 23), 'Invasion starts')
+    ]
+    plot_events(ax, events)
 
     for column in data.columns:
         ax.plot(data.index, data[column], label=column)
