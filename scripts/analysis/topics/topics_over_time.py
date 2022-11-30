@@ -10,7 +10,7 @@ def plot_events(ax, events):
         ax.axvline(x=event[0])
 
     for event in events:
-        ax.text(event[0], 0.01, event[1], rotation=45)
+        ax.text(event[0], 0.008, event[1], rotation=45)
 
 def main():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))

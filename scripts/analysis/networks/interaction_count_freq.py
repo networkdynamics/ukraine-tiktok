@@ -18,20 +18,46 @@ def main():
     multi_graph = nx.node_link_graph(node_link_data)
     multi_graph.remove_edges_from(nx.selfloop_edges(multi_graph))
 
-    edge_filters = {
-        'all': lambda edge_type: True,
-        'video_comment': lambda edge_type: edge_type == 'video_comment',
-        'comment_mention': lambda edge_type: edge_type == 'comment_mention',
-        'video_share': lambda edge_type: edge_type == 'video_share',
-        'video_mention': lambda edge_type: edge_type == 'video_mention',
-        'comment_reply': lambda edge_type: edge_type == 'comment_reply'
-    }
+    all_types = False
+    if all_types:
+        edge_filters = {
+            'all': lambda edge_type: True,
+            'video_comment': lambda edge_type: edge_type == 'video_comment',
+            'comment_mention': lambda edge_type: edge_type == 'comment_mention',
+            'video_share': lambda edge_type: edge_type == 'video_share',
+            'video_mention': lambda edge_type: edge_type == 'video_mention',
+            'comment_reply': lambda edge_type: edge_type == 'comment_reply'
+        }
 
-    fig, axes = plt.subplots(nrows=1, ncols=len(edge_filters), sharey=True, figsize=(20, 4))
+        fig, axes = plt.subplots(nrows=1, ncols=len(edge_filters), sharey=True, figsize=(20, 4))
 
-    for ax, (name, edge_filter) in zip(axes, edge_filters.items()):
+        for ax, (name, edge_filter) in zip(axes, edge_filters.items()):
+            graph = nx.Graph()
+            filtered_edges = [(u,v) for (u,v,d) in multi_graph.edges(data=True) if edge_filter(d['type'])]
+            for u,v in filtered_edges:
+                if graph.has_edge(u,v):
+                    graph[u][v]['weight'] += 1
+                else:
+                    graph.add_edge(u, v, weight=1)
+
+            edge_weights = [d['weight'] for u,v,d in graph.edges(data=True)]
+            weight_counts = collections.Counter(edge_weights)
+            weight_counts = sorted(list(weight_counts.items()), key=lambda t: t[0])
+            weights = [weight for weight, count in weight_counts]
+            counts = [count for weight, count in weight_counts]
+
+            scatter = ax.scatter(weights, counts)
+            ax.set_xlabel('Interaction Count')
+            ax.set_ylabel('Frequency')
+            ax.set_xscale('log')
+            ax.set_yscale('log')
+            ax.set_title(name)
+    else:
+        fig = plt.figure()
+        ax = fig.add_subplot()
+
         graph = nx.Graph()
-        filtered_edges = [(u,v) for (u,v,d) in multi_graph.edges(data=True) if edge_filter(d['type'])]
+        filtered_edges = [(u,v) for (u,v,d) in multi_graph.edges(data=True)]
         for u,v in filtered_edges:
             if graph.has_edge(u,v):
                 graph[u][v]['weight'] += 1
@@ -49,7 +75,6 @@ def main():
         ax.set_ylabel('Frequency')
         ax.set_xscale('log')
         ax.set_yscale('log')
-        ax.set_title(name)
 
     fig.tight_layout()
 

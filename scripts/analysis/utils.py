@@ -86,6 +86,7 @@ def load_comment_df():
     comment_df = comment_df[comment_df['video_id'].notna()]
     comment_df = comment_df[comment_df['mentions'].notna()]
     comment_df['text'] = comment_df['text'].str.replace(r'\n',  ' ', regex=True)
+    comment_df = comment_df.drop_duplicates('comment_id')
     return comment_df
 
 def get_comment_df():

@@ -41,20 +41,55 @@ def main():
     comment_attrs = comment_users_df.set_index('author_id').to_dict('index')
     nx.set_node_attributes(multi_graph, comment_attrs)
 
-    edge_filters = {
-        'all': lambda edge_type: True,
-        'video_comment': lambda edge_type: edge_type == 'video_comment',
-        'comment_mention': lambda edge_type: edge_type == 'comment_mention',
-        'video_share': lambda edge_type: edge_type == 'video_share',
-        'video_mention': lambda edge_type: edge_type == 'video_mention',
-        'comment_reply': lambda edge_type: edge_type == 'comment_reply'
-    }
+    all_types = False
 
-    fig, axes = plt.subplots(nrows=1, ncols=len(edge_filters), figsize=(20,4))
+    if all_types:
+        edge_filters = {
+            'all': lambda edge_type: True,
+            'video_comment': lambda edge_type: edge_type == 'video_comment',
+            'comment_mention': lambda edge_type: edge_type == 'comment_mention',
+            'video_share': lambda edge_type: edge_type == 'video_share',
+            'video_mention': lambda edge_type: edge_type == 'video_mention',
+            'comment_reply': lambda edge_type: edge_type == 'comment_reply'
+        }
 
-    for ax, (name, edge_filter) in zip(axes, edge_filters.items()):
+        fig, axes = plt.subplots(nrows=1, ncols=len(edge_filters), figsize=(20,4))
+
+        for ax, (name, edge_filter) in zip(axes, edge_filters.items()):
+            graph = nx.Graph()
+            filtered_edges = [(u,v) for (u,v,d) in multi_graph.edges(data=True) if edge_filter(d['type'])]
+            for u,v in filtered_edges:
+                if graph.has_edge(u,v):
+                    graph[u][v]['weight'] += 1
+                else:
+                    graph.add_edge(u, v, weight=1)
+
+            weight_cos_sim = []
+            for u,v in graph.edges():
+                u_embedding = multi_graph.nodes[u]['embeddings']
+                v_embedding = multi_graph.nodes[v]['embeddings']
+                cos_sim = np.dot(u_embedding, v_embedding) / (np.linalg.norm(u_embedding) * np.linalg.norm(v_embedding))
+                weight_cos_sim.append((graph[u][v]['weight'], cos_sim))
+
+            weight_cos_sim_freq = list(collections.Counter(weight_cos_sim).items())
+            weights = [w for (w, _),_ in weight_cos_sim_freq]
+            cos_sim = [c_s for (_,c_s),_ in weight_cos_sim_freq]
+            freqs = [f for (_,_),f in weight_cos_sim_freq]
+
+            log_norm = matplotlib.colors.LogNorm()
+            scatter = ax.scatter(weights, cos_sim, c=freqs, norm=log_norm)
+            plt.colorbar(scatter, ax=ax)
+            ax.set_xlabel('Interaction Count')
+            ax.set_ylabel('Cosine Similarity')
+            ax.set_xscale('log')
+            ax.set_title(name)
+            ax.set_ylim(bottom=-0.05, top=1.05)
+    else:
+        fig = plt.figure()
+        ax = fig.add_subplot()
+
         graph = nx.Graph()
-        filtered_edges = [(u,v) for (u,v,d) in multi_graph.edges(data=True) if edge_filter(d['type'])]
+        filtered_edges = [(u,v) for (u,v,d) in multi_graph.edges(data=True)]
         for u,v in filtered_edges:
             if graph.has_edge(u,v):
                 graph[u][v]['weight'] += 1
@@ -74,12 +109,11 @@ def main():
         freqs = [f for (_,_),f in weight_cos_sim_freq]
 
         log_norm = matplotlib.colors.LogNorm()
-        scatter = ax.scatter(weights, cos_sim, c=freqs, norm=log_norm)
+        scatter = ax.scatter(weights, cos_sim, c=freqs, norm=log_norm, s=1)
         plt.colorbar(scatter, ax=ax)
         ax.set_xlabel('Interaction Count')
         ax.set_ylabel('Cosine Similarity')
         ax.set_xscale('log')
-        ax.set_title(name)
         ax.set_ylim(bottom=-0.05, top=1.05)
 
     fig.tight_layout()
