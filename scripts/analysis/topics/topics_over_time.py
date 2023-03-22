@@ -10,14 +10,14 @@ def plot_events(ax, events):
         ax.axvline(x=event[0])
 
     for event in events:
-        ax.text(event[0], 0.008, event[1], rotation=45)
+        ax.text(event[0], 0.006, event[1], rotation=45)
 
 def main():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     root_dir_path = os.path.join(this_dir_path, '..', '..', '..')
     outputs_dir_path = os.path.join(root_dir_path, 'data', 'outputs', '100_clusters')
 
-    topics = [7, 5, 47, 19, 90, 75, 95]
+    topics = [5, 47, 19, 90, 95]
     top_n_topics = 5
     custom_labels = False
 
@@ -51,7 +51,7 @@ def main():
 
     normalize_frequency = False
     # Add traces
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 6))
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 4))
     data = data.set_index('Timestamp')
     data = data.pivot_table(index=['Timestamp'], columns=['Name'], values=['Frequency'], fill_value=0).droplevel(0, axis=1)
 

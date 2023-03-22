@@ -5,56 +5,22 @@ import os
 import tqdm
 import pandas as pd
 
+import utils
 
 def main():
 
-    this_dir_path = os.path.dirname(os.path.abspath(__file__))
-    data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
-    
-    hashtag_dir_path = os.path.join(data_dir_path, 'hashtags')
-    searches_dir_path = os.path.join(data_dir_path, 'searches')
-    file_paths = [os.path.join(hashtag_dir_path, file_name) for file_name in os.listdir(hashtag_dir_path)] \
-               + [os.path.join(searches_dir_path, file_name) for file_name in os.listdir(searches_dir_path)]
+    comment_df = utils.get_comment_df()
+    comment_df = comment_df.drop_duplicates('comment_id')
+    video_df = utils.get_video_df()
+    video_df = video_df.drop_duplicates('video_id')
 
-    blacklist_hashtags = ['derealization']
+    print(f"Num Ukraine invasion related videos: {len(video_df)}")
 
-    video_ids = []
-    for file_path in file_paths:
-        with open(file_path, 'r') as f:
-            video_data = json.load(f)
+    print(f"Num comments collected: {len(comment_df)}")
 
-        for video in video_data:
-            hashtags = [challenge['title'] for challenge in video.get('challenges', [])]
-            if any(blacklist_hashtag in hashtags for blacklist_hashtag in blacklist_hashtags):
-                continue
-            video_ids.append((video['id'], video['author']['uniqueId']))
+    num_users = len(video_df['user_unique_id'].unique()) 
 
-    video_ids = pd.DataFrame(video_ids, columns=['video_id', 'user_unique_id'])
-    video_ids = video_ids.drop_duplicates()
-    print(f"Num Ukraine invasion related videos: {len(video_ids)}")
-
-    comment_dir_path = os.path.join(data_dir_path, 'comments')
-
-    num_comments = 0
-    for file_name in tqdm.tqdm(os.listdir(comment_dir_path)):
-        file_path = os.path.join(comment_dir_path, file_name, 'video_comments.json')
-
-        if not os.path.exists(file_path):
-            continue
-
-        with open(file_path, 'r') as f:
-            comments = json.load(f)
-
-        num_comments += len(comments)
-        num_comments += sum(len(comment.get('reply_comment', []) if comment.get('reply_comment', []) else []) for comment in comments)
-
-    print(f"Num comments collected: {num_comments}")
-
-    user_dir_path = os.path.join(data_dir_path, 'users')
-
-    num_users_histories = len(video_ids['user_unique_id'].unique())
-
-    print(f"Num users histories collected: {num_users_histories}")
+    print(f"Num users histories collected: {num_users}")
 
 
 if __name__ == '__main__':

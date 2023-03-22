@@ -14,6 +14,35 @@ def str_to_list(stri):
         return []
     return [word.strip()[1:-1] for word in stri[1:-1].split(',')]
 
+def plot_histogram(ax, name, multi_graph, edge_func):
+    graph = nx.Graph()
+    filtered_edges = [(u,v) for (u,v,d) in multi_graph.edges(data=True) if edge_func]
+    for u,v in filtered_edges:
+        if graph.has_edge(u,v):
+            graph[u][v]['weight'] += 1
+        else:
+            graph.add_edge(u, v, weight=1)
+
+    weight_j_sim = []
+    for u,v in graph.edges():
+        u_hashtags = set(multi_graph.nodes[u]['hashtags'])
+        v_hashtags = set(multi_graph.nodes[v]['hashtags'])
+        j_sim = len(u_hashtags.intersection(v_hashtags)) / len(u_hashtags.union(v_hashtags))
+        weight_j_sim.append((graph[u][v]['weight'], j_sim))
+
+    # weight_j_sim_freq = list(collections.Counter(weight_j_sim).items())
+    weights = [w for (w, _) in weight_j_sim]
+    j_sim = [j_s for (_,j_s) in weight_j_sim]
+    # freqs = [f for (_,_),f in weight_j_sim_freq]
+
+    log_norm = matplotlib.colors.LogNorm()
+    _, _, _, im = ax.hist2d(weights, j_sim, bins=[10, 10], norm=log_norm)
+    plt.colorbar(im, ax=ax)
+    ax.set_xlabel('Interaction Count')
+    ax.set_ylabel('Jaccard Similarity')
+    ax.set_title(name)
+    ax.set_ylim(bottom=-0.05, top=1.05)
+
 def main():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     root_dir_path = os.path.join(this_dir_path, '..', '..', '..')
@@ -59,65 +88,14 @@ def main():
         fig, axes = plt.subplots(nrows=1, ncols=len(edge_filters), figsize=(20, 4))
 
         for ax, (name, edge_filter) in zip(axes, edge_filters.items()):
-            graph = nx.Graph()
-            filtered_edges = [(u,v) for (u,v,d) in multi_graph.edges(data=True) if edge_filter(d['type'])]
-            for u,v in filtered_edges:
-                if graph.has_edge(u,v):
-                    graph[u][v]['weight'] += 1
-                else:
-                    graph.add_edge(u, v, weight=1)
-
-            weight_j_sim = []
-            for u,v in graph.edges():
-                u_hashtags = set(multi_graph.nodes[u]['hashtags'])
-                v_hashtags = set(multi_graph.nodes[v]['hashtags'])
-                j_sim = len(u_hashtags.intersection(v_hashtags)) / len(u_hashtags.union(v_hashtags))
-                weight_j_sim.append((graph[u][v]['weight'], j_sim))
-
-            weight_j_sim_freq = list(collections.Counter(weight_j_sim).items())
-            weights = [w for (w, _),_ in weight_j_sim_freq]
-            j_sim = [j_s for (_,j_s),_ in weight_j_sim_freq]
-            freqs = [f for (_,_),f in weight_j_sim_freq]
-
-            log_norm = matplotlib.colors.LogNorm()
-            scatter = ax.scatter(weights, j_sim, c=freqs, norm=log_norm)
-            plt.colorbar(scatter, ax=ax)
-            ax.set_xlabel('Interaction Count')
-            ax.set_ylabel('Jaccard Similarity')
-            ax.set_xscale('log')
-            ax.set_title(name)
-            ax.set_ylim(bottom=-0.05, top=1.05)
+            edge_func = lambda d: edge_filter(d['type'])
+            plot_histogram(ax, name, multi_graph, edge_func)
     else:
         fig = plt.figure()
         ax = fig.add_subplot()
-
-        graph = nx.Graph()
-        filtered_edges = [(u,v) for (u,v,d) in multi_graph.edges(data=True)]
-        for u,v in filtered_edges:
-            if graph.has_edge(u,v):
-                graph[u][v]['weight'] += 1
-            else:
-                graph.add_edge(u, v, weight=1)
-
-        weight_j_sim = []
-        for u,v in graph.edges():
-            u_hashtags = set(multi_graph.nodes[u]['hashtags'])
-            v_hashtags = set(multi_graph.nodes[v]['hashtags'])
-            j_sim = len(u_hashtags.intersection(v_hashtags)) / len(u_hashtags.union(v_hashtags))
-            weight_j_sim.append((graph[u][v]['weight'], j_sim))
-
-        weight_j_sim_freq = list(collections.Counter(weight_j_sim).items())
-        weights = [w for (w, _),_ in weight_j_sim_freq]
-        j_sim = [j_s for (_,j_s),_ in weight_j_sim_freq]
-        freqs = [f for (_,_),f in weight_j_sim_freq]
-
-        log_norm = matplotlib.colors.LogNorm()
-        scatter = ax.scatter(weights, j_sim, c=freqs, norm=log_norm, s=5)
-        plt.colorbar(scatter, ax=ax)
-        ax.set_xlabel('Interaction Count')
-        ax.set_ylabel('Jaccard Similarity')
-        ax.set_xscale('log')
-        ax.set_ylim(bottom=-0.05, top=1.05)
+        name = 'All'
+        edge_func = lambda d: True
+        plot_histogram(ax, name, multi_graph, edge_func)
 
     fig.tight_layout()
 
