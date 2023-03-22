@@ -6,8 +6,8 @@ import time
 
 import tqdm
 
-from TikTokApi import TikTokApi
-from TikTokApi import exceptions
+import pytok
+from pytok import exceptions
 
 def main():
 
@@ -40,7 +40,7 @@ def main():
     while not finished:
         random.shuffle(users)
         try:
-            with TikTokApi(request_delay=delay, headless=True, chrome_version=chrome_version) as api:
+            with pytok.PyTok(request_delay=delay, headless=True, chrome_version=chrome_version) as api:
                 for username, user_id, sec_uid in tqdm.tqdm(users):
 
                     user_dir_path = os.path.join(users_dir_path, username)

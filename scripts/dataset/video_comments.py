@@ -6,8 +6,8 @@ from sqlalchemy import distinct
 
 import tqdm
 
-from TikTokApi import TikTokApi
-from TikTokApi import exceptions
+import pytok
+from pytok import exceptions
 
 def main():
 
@@ -74,7 +74,7 @@ def main():
     while not finished:
         random.shuffle(distinct_videos)
         try:
-            with TikTokApi(chrome_version=chrome_version, request_delay=delay, headless=True) as api:
+            with pytok.PyTok(chrome_version=chrome_version, request_delay=delay, headless=True) as api:
                 for video_ids in tqdm.tqdm(distinct_videos):
                     comment_dir_path = os.path.join(comments_dir_path, video_ids[0])
                     if not os.path.exists(comment_dir_path):
