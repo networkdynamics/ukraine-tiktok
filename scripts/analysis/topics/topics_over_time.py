@@ -15,9 +15,9 @@ def plot_events(ax, events):
 def main():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
     root_dir_path = os.path.join(this_dir_path, '..', '..', '..')
-    outputs_dir_path = os.path.join(root_dir_path, 'data', 'outputs', '100_clusters')
+    outputs_dir_path = os.path.join(root_dir_path, 'data', 'outputs', 'related_40_bertweet_base')
 
-    topics = [5, 47, 19, 90, 95]
+    topics = None
     top_n_topics = 5
     custom_labels = False
 

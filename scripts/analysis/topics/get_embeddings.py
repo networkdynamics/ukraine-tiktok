@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import tqdm
 
-import comment_topics
+import scripts.analysis.comment_topics as comment_topics
 
 def main():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
