@@ -43,6 +43,7 @@ def main():
                         os.mkdir(comment_dir_path)
 
                     comment_file_path = os.path.join(comment_dir_path, f"video_comments.json")
+
                     if os.path.exists(comment_file_path):
                         with open(comment_file_path, 'r') as f:
                             comments = json.load(f)
@@ -57,7 +58,7 @@ def main():
                                     all_replies_fetched = False
 
                             if all_replies_fetched and all_comments_users:
-                                continue
+                                continue    
 
                     try:
                         comments = []

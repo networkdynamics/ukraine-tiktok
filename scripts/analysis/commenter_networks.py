@@ -41,7 +41,9 @@ def main():
     data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
 
     comment_df = utils.get_comment_df()
+    comment_df = comment_df.drop_duplicates('comment_id')
     video_df = utils.get_video_df()
+    video_df = video_df.drop_duplicates('video_id')
 
     sample = None
     if sample:

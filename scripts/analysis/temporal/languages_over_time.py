@@ -28,7 +28,7 @@ def get_language(text):
 
 def main():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
-    data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
+    data_dir_path = os.path.join(this_dir_path, '..', '..', '..', 'data')
     
     comment_df = utils.get_comment_df()
 

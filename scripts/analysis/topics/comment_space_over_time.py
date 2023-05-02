@@ -20,7 +20,7 @@ import tqdm
 
 def main():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
-    data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
+    data_dir_path = os.path.join(this_dir_path, '..', '..', '..', 'data')
 
     df_path = os.path.join(data_dir_path, 'cache', 'half_mil_english_comments.csv')
     if os.path.exists(df_path):

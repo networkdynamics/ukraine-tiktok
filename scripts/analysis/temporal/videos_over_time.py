@@ -9,7 +9,7 @@ import tqdm
 
 def main():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
-    data_dir_path = os.path.join(this_dir_path, '..', '..', 'data', 'searches')
+    data_dir_path = os.path.join(this_dir_path, '..', '..', '..', 'data', 'searches')
 
     videos = []
     for file_name in os.listdir(data_dir_path):

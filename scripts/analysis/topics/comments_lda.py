@@ -124,7 +124,7 @@ class Lemmatizer:
 class StopwordRemover:
     def __init__(self):
         this_dir_path = os.path.dirname(os.path.abspath(__file__))
-        data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
+        data_dir_path = os.path.join(this_dir_path, '..', '..', '..', 'data')
         languages = ['english', 'russian', 'french', 'spanish', 'german']
         self.all_stopwords = set()
         for language in languages:
@@ -176,7 +176,7 @@ def process_comment(comment):
 
 def main():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
-    data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
+    data_dir_path = os.path.join(this_dir_path, '..', '..', '..', 'data')
     comment_dir_path = os.path.join(data_dir_path, 'comments')
 
     comments_data = []

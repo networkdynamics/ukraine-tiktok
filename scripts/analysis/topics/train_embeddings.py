@@ -37,7 +37,7 @@ class SocialGraphDataset(dgl.data.DGLDataset):
     def __init__(self, force_reload=False):
 
         this_dir_path = os.path.dirname(os.path.abspath(__file__))
-        data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
+        data_dir_path = os.path.join(this_dir_path, '..', '..', '..', 'data')
         raw_dir = os.path.join(data_dir_path, 'raw_graphs')
         save_dir = os.path.join(data_dir_path, 'processed_graphs')
 

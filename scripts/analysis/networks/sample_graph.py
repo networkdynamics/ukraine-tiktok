@@ -7,7 +7,7 @@ import networkx as nx
 
 def main():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
-    root_dir_path = os.path.join(this_dir_path, '..', '..')
+    root_dir_path = os.path.join(this_dir_path, '..', '..', '..')
     data_dir_path = os.path.join(root_dir_path, 'data')
 
     graph_type = 'homogeneous'

@@ -67,7 +67,7 @@ def main():
     df.plot()
 
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
-    root_dir_path = os.path.join(this_dir_path, '..', '..')
+    root_dir_path = os.path.join(this_dir_path, '..', '..', '..')
     outputs_dir_path = os.path.join(root_dir_path, 'data', 'outputs')
     fig_dir_path = os.path.join(root_dir_path, 'figs')
 

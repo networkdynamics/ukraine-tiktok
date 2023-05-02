@@ -12,11 +12,11 @@ import numpy as np
 import pandas as pd
 import tqdm
 
-import comment_topics
+import scripts.analysis.comment_topics as comment_topics
 
 def main():
     this_dir_path = os.path.dirname(os.path.abspath(__file__))
-    data_dir_path = os.path.join(this_dir_path, '..', '..', 'data')
+    data_dir_path = os.path.join(this_dir_path, '..', '..', '..', 'data')
 
     df_path = os.path.join(data_dir_path, 'cache', 'all_english_comments.csv')
     if not os.path.exists(df_path):

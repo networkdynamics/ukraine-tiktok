@@ -3,7 +3,7 @@ import json
 import os
 import time
 
-from TikTokApi import TikTokApi
+from pytok.tiktok import PyTok
 
 def main():
     #hashtags = ['standwithukraine', 'russia', 'nato', 'putin', 'moscow', 'zelenskyy', 'stopwar', 'stopthewar', 'ukrainewar', 'ww3']
@@ -18,7 +18,7 @@ def main():
     #finished = False
     #while not finished:
         #try:
-    with TikTokApi(headless=False) as api:
+    with PyTok(headless=False) as api:
         for hashtag in hashtags:
 
             file_path = os.path.join(data_dir_path, f"#{hashtag}_videos.json")

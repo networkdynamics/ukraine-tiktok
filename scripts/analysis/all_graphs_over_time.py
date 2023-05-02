@@ -29,7 +29,7 @@ def main():
     fig_dir_path = os.path.join(top_dir_path, 'figs')
     outputs_dir_path = os.path.join(top_dir_path, 'data', 'outputs')
 
-    fig, axes = plt.subplots(nrows=6, ncols=1, sharex=True, figsize=(10, 20))
+    fig, axes = plt.subplots(nrows=6, ncols=1, sharex=True, figsize=(8, 16))
 
     comment_df = utils.get_comment_df()
     comment_count_df = comment_df[['createtime', 'text']].groupby(pd.Grouper(key='createtime', freq='W')) \
@@ -43,11 +43,14 @@ def main():
         .sort_values('createtime') \
         .rename(columns={'desc': 'Video Count'})
 
-    comment_count_df.plot(ax=axes[0])
-    video_count_df.plot(ax=axes[0])
+    ax_0_twin = axes[0].twinx()
+    comment_ax = comment_count_df.plot(ax=axes[0], style='-', legend=False)
+    video_ax = video_count_df.plot(ax=ax_0_twin, style='-r', legend=False)
+    lns = [ax.lines[0] for ax in [comment_ax, video_ax]]
+    labs = [l.get_label() for l in lns]
     axes[0].set_ylabel('Count')
     axes[0].set_title('Count of Comments and Videos')
-    axes[0].legend(loc='right')
+    axes[0].legend(lns, labs, loc='right')
 
     top_hashtags_df = get_df('top_hashtags_over_time.csv')
     top_hashtags_df.plot(ax=axes[1])
@@ -82,7 +85,7 @@ def main():
 
     events = [
         (datetime(2022, 1, 17), 'Russia evacuates its Embassy in Kyiv'),
-        (datetime(2022, 2, 23), 'Russia invades Ukraine')
+        (datetime(2022, 2, 23), 'Invasion starts')
     ]
     plot_events(axes, events)
 

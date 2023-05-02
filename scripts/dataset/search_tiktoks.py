@@ -4,7 +4,7 @@ import os
 
 import tqdm
 
-from TikTokApi import TikTokApi
+from pytok.tiktok import PyTok
 
 def main():
     keywords = ['ukraine', 'standwithukraine', 'russia', 'nato', 'putin', 'moscow', 'zelenskyy', 'stopwar', 'stopthewar', 'ukrainewar', 'ww3' \
@@ -20,7 +20,7 @@ def main():
             continue
 
         video_data = []
-        with TikTokApi() as api:
+        with PyTok() as api:
             for video in tqdm.tqdm(api.search(keyword).videos(count=10000), total=10000):
                 video_data.append(video.info())
 
